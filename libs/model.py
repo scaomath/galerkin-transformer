@@ -538,7 +538,7 @@ class DownScaler(nn.Module):
         elif downsample_mode == 'interp':
             self.downsample = Interp2dEncoder(in_dim=in_dim,
                                               out_dim=out_dim,
-                                              scale_factor=interp_size,
+                                              interp_size=interp_size,
                                               activation_type=activation_type,
                                               debug=debug)
         else:

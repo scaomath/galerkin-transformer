@@ -353,7 +353,7 @@ class Interp2dEncoder(nn.Module):
                  stride: int = 1,
                  padding: int = 1,
                  dilation: int = 1,
-                 scale_factor=(0.25, 0.28),
+                 interp_size=None,
                  residual=False,
                  activation_type='silu',
                  debug=False):
@@ -366,6 +366,8 @@ class Interp2dEncoder(nn.Module):
         padding2 = padding//4 if padding//4 >= 1 else 1
         if activation_type is None:
             activation_type = 'silu'
+        if interp_size is None:
+            interp_size = ((141, 141), (43, 43))  
         self.conv0 = Conv2dResBlock(in_dim, out_dim, kernel_size=kernel_size,
                                     padding=padding, activation_type=activation_type,
                                     residual=residual)
@@ -381,21 +383,18 @@ class Interp2dEncoder(nn.Module):
                                     kernel_size=kernel_size,
                                     residual=residual,
                                     activation_type=activation_type,)
-        self.interp0 = lambda x: F.interpolate(x, scale_factor=scale_factor[0],
+        self.interp0 = lambda x: F.interpolate(x, size=interp_size[0],
                                                mode='bilinear',
-                                               align_corners=True,
-                                               recompute_scale_factor=True)
-        self.interp1 = lambda x: F.interpolate(x, scale_factor=scale_factor[1],
+                                               align_corners=True)
+        self.interp1 = lambda x: F.interpolate(x, size=interp_size[1],
                                                mode='bilinear',
-                                               align_corners=True,
-                                               recompute_scale_factor=True)
+                                               align_corners=True)
         self.activation = nn.SiLU() if activation_type == 'silu' else nn.ReLU()
         # self.activation = nn.LeakyReLU() # leakyrelu decreased performance 10 times?
         self.add_res = residual
         self.debug = debug
 
     def forward(self, x):
-
         x = self.conv0(x)
         x = self.interp0(x)
         x = self.activation(x)
@@ -407,7 +406,6 @@ class Interp2dEncoder(nn.Module):
 
         if self.add_res:
             out += x
-
         out = self.interp1(out)
         out = self.activation(out)
         return out
