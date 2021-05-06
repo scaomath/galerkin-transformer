@@ -430,6 +430,7 @@ class DarcyDataset(Dataset):
                  normalizer_x=None,
                  normalization=True,
                  renormalization=False,
+                 noise=0,
                  subsample_attn: int = 15,
                  subsample_nodes: int = 1,
                  subsample_inverse: int = 1,
@@ -494,6 +495,7 @@ class DarcyDataset(Dataset):
         self.mass_features = None
         self.random_state = random_state
         self.eps = 1e-8
+        self.noise = noise
         if self.data_path is not None:
             self._initialize()
 
@@ -520,7 +522,6 @@ class DarcyDataset(Dataset):
         nodes, targets, targets_grad = self.get_data(a, u)
 
         self.coeff = nodes  # un-transformed coeffs
-        # pos and elem are already downsampled
         self.pos, self.elem = self.get_grid(self.n_grid)
         self.pos_fine = self.get_grid(self.n_grid_fine,
                                       subsample=self.subsample_nodes,
@@ -553,6 +554,9 @@ class DarcyDataset(Dataset):
                     x=targets[:, 1:-1, 1:-1, :])
         elif self.normalization:
             nodes = self.normalizer_x.transform(nodes)
+
+        if self.noise > 0:
+            nodes += self.noise*np.random.randn(*nodes.shape)
 
         self.node_features = nodes  # (N, n, n, 1)
         self.target = targets  # (N, n, n, 1) of (N, n_s, n_s, 1) if inverse
@@ -869,11 +873,6 @@ class WeightedL2Loss(_WeightedLoss):
             targets = WeightedL2Loss._noise(
                 targets, targets.size(-1), self.noise)
 
-        if self.debug:
-            # print(f"diff const size: \t {K.size()}")
-            print(f"u pred size: \t {preds.size()}")
-            print(f"Du size: \t {targets_prime.size()}")
-
         target_norm = h*targets.pow(2).sum(dim=1)
 
         if targets_prime is not None:
@@ -1020,11 +1019,6 @@ class WeightedL2Loss2d(_WeightedLoss):
         if self.noise > 0:
             targets = WeightedL2Loss2d._noise(targets, targets.size(-1), self.noise)
 
-        if self.debug:
-            print(f"diff const size: \t {K.size()}")
-            print(f"u pred size: \t {preds.size()}")
-            print(f"Du size: \t {targets_prime.size()}")
-
         target_norm = targets.pow(2).mean(dim=(1, 2)) + self.eps
 
         if targets_prime is not None:
@@ -1059,11 +1053,6 @@ class WeightedL2Loss2d(_WeightedLoss):
             if K.ndim > 1:
                 K = K[:, s:-s, s:-s].contiguous()
 
-            if self.debug:
-                print(f"diff const size: \t {K.size()}")
-                print(f"Du size: \t {targets_prime.size()}")
-                print(f"D(Nu) size: \t {preds_diff.size()}")
-                print(f"\|a Du\| size: \t {targets_prime_norm.size()}")
             regularizer = self.gamma * h * (K * (targets_prime - preds_diff)
                                             .pow(2)).mean(dim=(1, 2, 3))/targets_prime_norm
 
