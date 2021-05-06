@@ -34,7 +34,7 @@ class BurgersDataset(Dataset):
                  super_resolution: int = 1,
                  data_path=None,
                  online_features=False,
-                 return_edge=True,
+                 return_edge=False,
                  renormalization=False,
                  return_distance_features=True,
                  return_mass_features=False,

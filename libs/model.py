@@ -664,11 +664,8 @@ class FourierTransformer(nn.Module):
         x_freq = self.freq_regressor(
             x)[:, :self.pred_len, :] if self.n_freq_targets > 0 else None
 
-        x = self.dropout(x)
+        x = self.dp(x)
         x = self.regressor(x, grid=grid)
-
-        if self.super_resolution:
-            x = x.view(x.size(0), -1, 1)
 
         return dict(preds=x,
                     preds_freq=x_freq,
@@ -705,7 +702,7 @@ class FourierTransformer(nn.Module):
             self.n_hidden if self.dim_feedforward is None else self.dim_feedforward
         self.spacial_dim = self.pos_dim if self.config['spacial_dim'] is None else self.spacial_dim
         self.spacial_fc = False if self.config['spacial_fc'] is None else self.spacial_fc
-        self.dropout = nn.Dropout(
+        self.dp = nn.Dropout(
             0.1 if self.dropout is None else self.dropout)
         if self.decoder_type == 'attention':
             self.num_ft_layers += 1
@@ -1040,7 +1037,6 @@ if __name__ == '__main__':
                          fourier_modes=16,
                          spacial_dim=1,
                          spacial_fc=True,
-                         super_resolution=1,
                          dropout=0.1,
                          debug=False,
                          )
