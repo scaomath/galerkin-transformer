@@ -12,7 +12,7 @@ The data is of courtesy of [Mr. Zongyi Li (Caltech)](https://github.com/zongyi-l
 All examples are learning PDE-related operators. The setting can be found in [`config.yml`](./config.yml)
 
 ## Burgers
-The baseline benchmark [`ex1_burgers.py`](./ex1_burgers.py) is using `1cycle` for 100 epochs, 2 FT layers as encoder and 2 SpectralConv1d layers from [Li et al 2020](https://github.com/zongyi-li/fourier_neural_operator) as decoder. Inference relative error is about `1e-3` with a simple pointwise forward expansion feature extractor. 
+The baseline benchmark [`ex1_burgers.py`](./ex1_burgers.py) is using `1cycle` for 100 epochs, 2 FT layers as encoder and 2 SpectralConv1d layers from [Li et al 2020](https://github.com/zongyi-li/fourier_neural_operator) as decoder. Inference relative error is about `1e-3` with a simple pointwise forward expansion feature extractor, and `5e-4` if we know how construct proper edge matrices for GCN.
 Default benchmark:
 ```python
 python ex1_burgers.py
