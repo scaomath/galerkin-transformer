@@ -9,22 +9,25 @@ This is the repository for paper:
 The data is of courtesy of [Mr. Zongyi Li (Caltech)](https://github.com/zongyi-li): https://github.com/zongyi-li/fourier_neural_operator
 
 # Examples
-All examples are learning PDE-related operators. The setting can be found in [`config.yml`](./config.yml)
+All examples are learning PDE-related operators. The setting can be found in [`config.yml`](./config.yml).
 
 ## Burgers
-The baseline benchmark [`ex1_burgers.py`](./ex1_burgers.py) is using `1cycle` for 100 epochs, 2 FT layers as encoder and 2 SpectralConv1d layers from [Li et al 2020](https://github.com/zongyi-li/fourier_neural_operator) as decoder. Inference relative error is about `1e-3` with a simple pointwise forward expansion feature extractor, and `5e-4` if we know how construct proper edge matrices for GCN.
-Default benchmark:
+The baseline benchmark [`ex1_burgers.py`](./ex1_burgers.py) is using `1cycle` for 100 epochs, 2 FT layers as encoder and 2 SpectralConv1d layers from [Li et al 2020](https://github.com/zongyi-li/fourier_neural_operator) as decoder. Inference relative error is about `1e-3` with a simple pointwise forward expansion feature extractor, and `5e-4` if we know how construct proper edge matrices for GCN. The operator input the initial condition of a viscous Burgers' equation on a discrete grid, the output is an approximation to the solution marched to time $1$. The initial data are generating using a GRF and the data in the validation set are not in the train set.
+
+Default benchmark on a 2048 grid using the Fourier Transformer:
 ```python
 python ex1_burgers.py
 ```
-No subsampling (8192 grid), Galerkin-type attention, adding a diagonal matrix to the Xavier initialization of the `W^Q, W^K, W^V` matrices.
+No subsampling (8192 grid), Galerkin-type attention, adding a diagonal matrix to the Xavier initializations of the `W^Q, W^K, W^V` matrices (about 30% better).
 ```python
-python ex1_burgers.py --subsample 1 --attn-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01
+python ex1_burgers.py --subsample 1\
+                      --attn-type 'galerkin'\
+                      --xavier-init 0.01 --diag-weight 0.01
 ```
 
 ## Interface Darcy flow
 
-## Inverse coefficient identification for Darcy flow
+## Inverse interface coefficient identification for Darcy flow
 
 
 # License

@@ -143,15 +143,10 @@ class GraphConvolution(nn.Module):
     """
     A modified implementation from 
     https://github.com/tkipf/pygcn/blob/master/pygcn/layers.py
-    to incorporate batch size
+    to incorporate batch size, and multiple edge
 
     Simple GCN layer, similar to https://arxiv.org/abs/1609.02907
-
-    Input:
-        - x: node features (bsz, n_feats, n_nodes)
-        - edge: edge features (bsz, n_feats, n_nodes, n_nodes)
     """
-
     def __init__(self, in_features, out_features, bias=True, debug=False):
         super(GraphConvolution, self).__init__()
         self.in_features = in_features
@@ -228,8 +223,7 @@ class GraphAttention(nn.Module):
 
         output: (-1, seq_len, n_feats)
         '''
-        h = torch.matmul(
-            node, self.W)  # node: (-1, N, in_features), W.shape: (-1, N, out_features)
+        h = torch.matmul(node, self.W)
         bsz, seq_len = h.size(0), h.size(1)
 
         a_input = torch.cat([h.repeat(1, 1, seq_len).view(bsz, seq_len * seq_len, -1),
@@ -268,13 +262,11 @@ class EdgeEncoder(nn.Module):
 
         conv_dim0 = int(out_dim/3*2)
         conv_dim1 = int(out_dim - conv_dim0)
-        self.lap_conv1 = Conv2dResBlock(edge_feats, conv_dim0, kernel_size=3)
-        self.lap_conv2 = Conv2dResBlock(conv_dim0, conv_dim1, kernel_size=3)
+        self.lap_conv1 = Conv2dResBlock(edge_feats, conv_dim0)
+        self.lap_conv2 = Conv2dResBlock(conv_dim0, conv_dim1)
 
     def forward(self, lap):
-        # (N, edge_feats, S, S, ) -> (N, conv_dim0, S, S, )
         edge1 = self.lap_conv1(lap)
-        # (N, conv_dim0, S, S, ) -> (N, conv_dim1, S, S, )
         edge2 = self.lap_conv2(edge1)
         if self.return_lap:
             return torch.cat([lap, edge1, edge2], dim=1)
@@ -343,8 +335,8 @@ class Conv2dEncoder(nn.Module):
 
 class Interp2dEncoder(nn.Module):
     r'''
-    Using Interpolate instead of avg pool
-    interp dim hard coded
+    Using bilinear interpolate instead of avg pool
+    interp dim given by users
     '''
 
     def __init__(self, in_dim: int,
@@ -413,7 +405,7 @@ class Interp2dEncoder(nn.Module):
 class DeConv2dBlock(nn.Module):
     '''
     Similar to a LeNet block
-    4 upsampling
+    4x upsampling, dimension hard-coded
     '''
 
     def __init__(self, in_dim: int,
@@ -458,7 +450,9 @@ class DeConv2dBlock(nn.Module):
 
 class Interp2dUpsample(nn.Module):
     '''
-    interpolate then Conv2dResBlock, hard-coded
+    interp->conv2d->interp
+    or
+    identity
     '''
 
     def __init__(self, in_dim: int,
@@ -477,8 +471,6 @@ class Interp2dUpsample(nn.Module):
             activation_type = 'silu'
         self.activation = nn.SiLU() if activation_type == 'silu' else nn.ReLU()
         self.dropout = nn.Dropout(dropout)
-        if interp_size is None:
-            interp_size = ((105, 105), (419, 419))  # for forward problem
         if conv_block:
             self.conv = nn.Sequential(Conv2dResBlock(
                 in_dim, out_dim,
@@ -490,20 +482,33 @@ class Interp2dUpsample(nn.Module):
                 self.dropout,
                 self.activation)
         self.conv_block = conv_block
-        self.interp0 = lambda x: F.interpolate(x, size=interp_size[0],
-                                               mode=interp_mode,
-                                               align_corners=True)
-        self.interp1 = lambda x: F.interpolate(x, size=interp_size[1],
-                                               mode=interp_mode,
-                                               align_corners=True)
+        if isinstance(interp_size[0], float) and isinstance(interp_size[1], float): 
+            self.interp0 = lambda x: F.interpolate(x, scale_factor=interp_size[0],
+                                                mode=interp_mode,
+                                                recompute_scale_factor=True,
+                                                align_corners=True)
+            self.interp1 = lambda x: F.interpolate(x, scale_factor=interp_size[1],
+                                                mode=interp_mode,
+                                                recompute_scale_factor=True,
+                                                align_corners=True)
+        elif isinstance(interp_size[0], tuple) and isinstance(interp_size[1], tuple):
+            self.interp0 = lambda x: F.interpolate(x, size=interp_size[0],
+                                                mode=interp_mode,
+                                                align_corners=True)
+            self.interp1 = lambda x: F.interpolate(x, size=interp_size[1],
+                                                mode=interp_mode,
+                                                align_corners=True)
+        elif interp_size is None:
+            self.interp0 = Identity()
+            self.interp1 = Identity()
 
         self.debug = debug
 
     def forward(self, x):
         x = self.interp0(x)
         if self.conv_block:
-            x = self.conv(x)
-        x = self.interp1(x)
+            x = self.conv(x) 
+        x = self.interp1(x) 
         return x
 
 def attention(query, key, value,
@@ -515,14 +520,14 @@ def attention(query, key, value,
     Compute the Scaled Dot Product Attention
     '''
 
-    d_k = query.size(-1)  # d_model//n_heads
+    d_k = query.size(-1)
 
     if attention_type == 'cosine':
         p_attn = F.cosine_similarity(query, key.transpose(-2, -1)) \
             / math.sqrt(d_k)
     else:
         scores = torch.matmul(query, key.transpose(-2, -1)) \
-            / math.sqrt(d_k)  # scores is (bsz, n_head, seq_len, seq_len)
+            / math.sqrt(d_k)
         seq_len = scores.size(-1)
 
         if attention_type == 'softmax':
