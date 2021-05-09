@@ -36,3 +36,45 @@ ex1_burgers:
   encoder_dropout: 0.0
   decoder_dropout: 0.0
   debug: False
+
+
+ex2_darcy:
+  node_feats: 1
+  edge_feats: 1
+  pos_dim: 2
+  n_targets: 1
+  n_hidden: 64
+  num_feat_layers: 0
+  num_ft_layers: 10
+  n_head: 1
+  dim_feedforward: 128
+  feat_extract_type: null
+  attention_type: galerkin
+  xavier_init: 0.01
+  diagonal_weight: 0.01
+  symmetric_init: False
+  layer_norm: False
+  attn_norm: True
+  batch_norm: False
+  return_attn_weight: False
+  return_ortho: False
+  seq_len: null
+  decoder_type: ifft2
+  spacial_dim: 2
+  spacial_fc: True
+  upsample_mode: interp
+  downsample_mode: interp
+  freq_dim: 32
+  boundary_condition: dirichlet
+  num_regressor_layers: 2
+  fourier_modes: 12
+  regressor_activation: silu
+  downscaler_activation: relu
+  upscaler_activation: silu
+  last_activation: True
+  dropout: 0.0
+  downscaler_dropout: 0.1
+  upscaler_dropout: 0.0
+  encoder_dropout: 0.0
+  decoder_dropout: 0
+  debug: False

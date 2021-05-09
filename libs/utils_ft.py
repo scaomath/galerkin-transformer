@@ -725,12 +725,13 @@ def run_train(model, loss_func, metric_func,
             else:
                 metric_0, metric_1 = val_result["metric"][0], val_result["metric"][1]
                 desc = color(
-                    f"| val metric 1: {metric_0:.3e} ", color=Colors.magenta)
+                    f"| val metric 1: {metric_0:.3e} ", color=Colors.blue)
                 desc += color(f"| val metric 2: {metric_1:.3e} ",
                               color=Colors.blue)
             desc += color(
                 f"| best val: {best_val_metric:.3e} at epoch {best_val_epoch+1}", color=Colors.yellow)
             desc += color(f" | early stop: {stop_counter} ", color=Colors.red)
+            desc += color(f" | current lr: {lr:.3e}", color=Colors.magenta)
             if not tqdm_epoch:
                 tqdm.write("\n"+desc+"\n")
             else:

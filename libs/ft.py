@@ -442,7 +442,7 @@ class DarcyDataset(Dataset):
                  valid_len=0.0,
                  online_features=False,
                  sparse_edge=False,
-                 return_edge=True,
+                 return_edge=False,
                  return_lap_only=True,
                  return_boundary=False,
                  random_state=1127802):
@@ -505,11 +505,14 @@ class DarcyDataset(Dataset):
     def _initialize(self):
         get_seed(self.random_state, printout=False)
         with timer(f"Loading {self.data_path.split('/')[-1]}"):
-            data = loadmat(self.data_path)
-            a = data['coeff']  # (N, n, n)
-            u = data['sol']  # (N, n, n)
-            del data
-            gc.collect()
+            try:
+                data = loadmat(self.data_path)
+                a = data['coeff']  # (N, n, n)
+                u = data['sol']  # (N, n, n)
+                del data
+                gc.collect()
+            except FileNotFoundError as e:
+                print("Please download the dataset from https://github.com/zongyi-li/fourier_neural_operator and put untar them in the data folder.")
 
         data_len = self.get_data_len(len(a))
 
@@ -566,7 +569,7 @@ class DarcyDataset(Dataset):
         if self.train_data:
             if self.train_len <= 1:
                 train_len = int(self.train_len*len_data)
-            elif 1 < self.train_len < len_data:
+            elif 1 < self.train_len <= len_data:
                 train_len = self.train_len
             else:
                 train_len = int(0.8*len_data)
@@ -574,7 +577,7 @@ class DarcyDataset(Dataset):
         else:
             if self.valid_len <= 1:
                 valid_len = int(self.valid_len*len_data)
-            elif 1 < self.valid_len < len_data:
+            elif 1 < self.valid_len <= len_data:
                 valid_len = self.valid_len
             else:
                 valid_len = int(0.1*len_data)
@@ -682,6 +685,19 @@ class DarcyDataset(Dataset):
         D = diags(A.diagonal()**(-0.5))
         A = (D.dot(A)).dot(D)
         return A
+
+    @staticmethod
+    def get_scaler_sizes(n_f, n_c):
+        factor = np.sqrt(n_c/n_f)
+        factor = np.round(factor, 3)
+        last_digit = float(str(factor)[-1])
+        factor = np.round(factor, 2)
+        if last_digit < 5:
+            factor += 1e-2
+        down_factor = (factor, factor)
+        n_m = round(n_f*factor)
+        up_size = ((n_m, n_m), (n_f, n_f))
+        return down_factor, up_size
 
     def get_edge(self, a):  # a: diffusion constant for all, not downsampled
         # (x,y), elements downsampled if applicable

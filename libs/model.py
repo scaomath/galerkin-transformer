@@ -513,8 +513,8 @@ class SpectralRegressor(nn.Module):
 
 
 class DownScaler(nn.Module):
-    def __init__(self, in_dim,  # num of the orig feats
-                 out_dim,  # hidden feats for GCN
+    def __init__(self, in_dim,
+                 out_dim,
                  dropout=0.1,
                  padding=5,
                  downsample_mode='conv',
@@ -540,10 +540,10 @@ class DownScaler(nn.Module):
                                               out_dim=out_dim,
                                               interp_size=interp_size,
                                               activation_type=activation_type,
+                                              dropout=dropout,
                                               debug=debug)
         else:
             raise NotImplementedError("downsample mode not implemented.")
-        self.dropout = nn.Dropout(dropout)
         self.in_dim = in_dim
         self.out_dim = out_dim
 

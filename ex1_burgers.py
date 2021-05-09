@@ -54,18 +54,20 @@ def main():
                         help='input Xavier initialization strength for Q,K,V weights (default: 0.01)')
     parser.add_argument('--diag-weight', type=float, default=1e-2, metavar='diag_weight',
                         help='input diagonal weight initialization strength for Q,K,V weights (default: 0.01)')
+    parser.add_argument('--reg-layernorm', action='store_true', default=False,
+                        help='use the conventional layer normalization')
     parser.add_argument('--epochs', type=int, default=100, metavar='N',
-                        help='number of epochs to train (default: 10)')
+                        help='number of epochs to train (default: 100)')
     parser.add_argument('--lr', type=float, default=1e-3, metavar='LR',
                         help='max learning rate (default: 0.001)')
     parser.add_argument('--gamma', type=float, default=1e-1, metavar='regularizer',
                         help='strength of gradient regularizer (default: 0.1)')
-    parser.add_argument('--cuda', action='store_true', default=True,
-                        help='enables GPU training')
+    parser.add_argument('--no-cuda', action='store_true', default=False,
+                        help='disables CUDA training')
     parser.add_argument('--seed', type=int, default=SEED, metavar='Seed',
                         help='random seed (default: 1127802)')
     args = parser.parse_args()
-    cuda = args.cuda and torch.cuda.is_available()
+    cuda = not args.no_cuda and torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     kwargs = {'pin_memory': True} if cuda else {}
 
@@ -103,6 +105,8 @@ def main():
     config['attention_type'] = args.attn_type
     config['diagonal_weight'] = args.diag_weight
     config['xavier_init'] = args.xavier_init
+    config['layer_norm'] = args.reg_layernorm
+    config['attn_norm'] = not args.reg_layernorm
 
     torch.cuda.empty_cache()
     model = FourierTransformer(**config)
@@ -111,7 +115,7 @@ def main():
 
     epochs = args.epochs
     lr = args.lr
-    h = (1/2**13)*subsample
+    h = (1/2**13)*args.subsample
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = OneCycleLR(optimizer, max_lr=lr, div_factor=1e4, final_div_factor=1e4,
                            steps_per_epoch=len(train_loader), epochs=epochs)

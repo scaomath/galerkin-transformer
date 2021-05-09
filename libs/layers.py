@@ -50,6 +50,7 @@ class Shortcut2d(nn.Module):
         x = x.permute(0, 3, 1, 2)
         return x
 
+
 class PositionalEncoding(nn.Module):
     '''
     https://pytorch.org/tutorials/beginner/transformer_tutorial.html
@@ -139,6 +140,7 @@ class Conv2dResBlock(nn.Module):
         else:
             return self.activation(x)
 
+
 class GraphConvolution(nn.Module):
     """
     A modified implementation from 
@@ -147,6 +149,7 @@ class GraphConvolution(nn.Module):
 
     Simple GCN layer, similar to https://arxiv.org/abs/1609.02907
     """
+
     def __init__(self, in_features, out_features, bias=True, debug=False):
         super(GraphConvolution, self).__init__()
         self.in_features = in_features
@@ -250,6 +253,7 @@ class GraphAttention(nn.Module):
             + str(self.in_features) + ' -> ' \
             + str(self.out_features) + ')'
 
+
 class EdgeEncoder(nn.Module):
     def __init__(self, out_dim: int,
                  edge_feats: int,
@@ -272,6 +276,7 @@ class EdgeEncoder(nn.Module):
             return torch.cat([lap, edge1, edge2], dim=1)
         else:
             return torch.cat([edge1, edge2], dim=1)
+
 
 class Conv2dEncoder(nn.Module):
     r'''
@@ -333,10 +338,11 @@ class Conv2dEncoder(nn.Module):
         out = self.activation(out)
         return out
 
+
 class Interp2dEncoder(nn.Module):
     r'''
-    Using bilinear interpolate instead of avg pool
-    interp dim given by users
+    Using Interpolate instead of avg pool
+    interp dim hard coded or using a factor
     '''
 
     def __init__(self, in_dim: int,
@@ -348,6 +354,7 @@ class Interp2dEncoder(nn.Module):
                  interp_size=None,
                  residual=False,
                  activation_type='silu',
+                 dropout=0.1,
                  debug=False):
         super(Interp2dEncoder, self).__init__()
 
@@ -358,35 +365,53 @@ class Interp2dEncoder(nn.Module):
         padding2 = padding//4 if padding//4 >= 1 else 1
         if activation_type is None:
             activation_type = 'silu'
-        if interp_size is None:
-            interp_size = ((141, 141), (43, 43))  
         self.conv0 = Conv2dResBlock(in_dim, out_dim, kernel_size=kernel_size,
                                     padding=padding, activation_type=activation_type,
+                                    dropout=dropout,
                                     residual=residual)
         self.conv1 = Conv2dResBlock(out_dim, conv_dim0, kernel_size=kernel_size,
                                     padding=padding1,
                                     stride=stride, residual=residual,
+                                    dropout=dropout,
                                     activation_type=activation_type,)
         self.conv2 = Conv2dResBlock(conv_dim0, conv_dim1, kernel_size=kernel_size,
                                     dilation=dilation,
                                     padding=padding2, residual=residual,
+                                    dropout=dropout,
                                     activation_type=activation_type,)
         self.conv3 = Conv2dResBlock(conv_dim1, conv_dim2,
                                     kernel_size=kernel_size,
                                     residual=residual,
+                                    dropout=dropout,
                                     activation_type=activation_type,)
-        self.interp0 = lambda x: F.interpolate(x, size=interp_size[0],
-                                               mode='bilinear',
-                                               align_corners=True)
-        self.interp1 = lambda x: F.interpolate(x, size=interp_size[1],
-                                               mode='bilinear',
-                                               align_corners=True)
+        if isinstance(interp_size[0], float) and isinstance(interp_size[1], float):
+            self.interp0 = lambda x: F.interpolate(x, scale_factor=interp_size[0],
+                                                   mode='bilinear',
+                                                   recompute_scale_factor=True,
+                                                   align_corners=True)
+            self.interp1 = lambda x: F.interpolate(x, scale_factor=interp_size[1],
+                                                   mode='bilinear',
+                                                   recompute_scale_factor=True,
+                                                   align_corners=True,)
+        elif isinstance(interp_size[0], tuple) and isinstance(interp_size[1], tuple):
+            self.interp0 = lambda x: F.interpolate(x, size=interp_size[0],
+                                                   mode='bilinear',
+                                                   align_corners=True)
+            self.interp1 = lambda x: F.interpolate(x, size=interp_size[1],
+                                                   mode='bilinear',
+                                                   align_corners=True,)
+        elif interp_size is None:
+            self.interp0 = Identity()
+            self.interp1 = Identity()
+        else:
+            raise NotImplementedError("interpolation size not implemented.")
         self.activation = nn.SiLU() if activation_type == 'silu' else nn.ReLU()
         # self.activation = nn.LeakyReLU() # leakyrelu decreased performance 10 times?
         self.add_res = residual
         self.debug = debug
 
     def forward(self, x):
+
         x = self.conv0(x)
         x = self.interp0(x)
         x = self.activation(x)
@@ -401,6 +426,7 @@ class Interp2dEncoder(nn.Module):
         out = self.interp1(out)
         out = self.activation(out)
         return out
+
 
 class DeConv2dBlock(nn.Module):
     '''
@@ -440,13 +466,14 @@ class DeConv2dBlock(nn.Module):
         self.debug = debug
 
     def forward(self, x):
-        x = self.deconv0(x) 
+        x = self.deconv0(x)
         x = self.dropout(x)
 
         x = self.activation(x)
         x = self.deconv1(x)
         x = self.activation(x)
         return x
+
 
 class Interp2dUpsample(nn.Module):
     '''
@@ -482,22 +509,22 @@ class Interp2dUpsample(nn.Module):
                 self.dropout,
                 self.activation)
         self.conv_block = conv_block
-        if isinstance(interp_size[0], float) and isinstance(interp_size[1], float): 
+        if isinstance(interp_size[0], float) and isinstance(interp_size[1], float):
             self.interp0 = lambda x: F.interpolate(x, scale_factor=interp_size[0],
-                                                mode=interp_mode,
-                                                recompute_scale_factor=True,
-                                                align_corners=True)
+                                                   mode=interp_mode,
+                                                   recompute_scale_factor=True,
+                                                   align_corners=True)
             self.interp1 = lambda x: F.interpolate(x, scale_factor=interp_size[1],
-                                                mode=interp_mode,
-                                                recompute_scale_factor=True,
-                                                align_corners=True)
+                                                   mode=interp_mode,
+                                                   recompute_scale_factor=True,
+                                                   align_corners=True)
         elif isinstance(interp_size[0], tuple) and isinstance(interp_size[1], tuple):
             self.interp0 = lambda x: F.interpolate(x, size=interp_size[0],
-                                                mode=interp_mode,
-                                                align_corners=True)
+                                                   mode=interp_mode,
+                                                   align_corners=True)
             self.interp1 = lambda x: F.interpolate(x, size=interp_size[1],
-                                                mode=interp_mode,
-                                                align_corners=True)
+                                                   mode=interp_mode,
+                                                   align_corners=True)
         elif interp_size is None:
             self.interp0 = Identity()
             self.interp1 = Identity()
@@ -507,9 +534,10 @@ class Interp2dUpsample(nn.Module):
     def forward(self, x):
         x = self.interp0(x)
         if self.conv_block:
-            x = self.conv(x) 
-        x = self.interp1(x) 
+            x = self.conv(x)
+        x = self.interp1(x)
         return x
+
 
 def attention(query, key, value,
               mask=None, dropout=None, weight=None,
@@ -585,7 +613,7 @@ class SimpleAttention(nn.Module):
     pytorch official implementation has seq_len in dim=0
     attn_output: (L, N, E) where L is the target sequence length, N is the batch size, E is the embedding dimension.
     attn_output_weights: (N, L, S) where N is the batch size, L is the target sequence length, S is the source sequence length.
-    
+
     attn_types: 
         - fourier: integral, local
         - galerkin: global
@@ -820,7 +848,7 @@ class BulkRegressor(nn.Module):
 
 
 class SpectralConv1d(nn.Module):
-    def __init__(self, in_dim, 
+    def __init__(self, in_dim,
                  out_dim,
                  modes: int,  # number of fourier modes
                  n_grid=None,
@@ -866,9 +894,9 @@ class SpectralConv1d(nn.Module):
         res = self.linear(x)
         x = self.dropout(x)
 
-        x = x.permute(0, 2, 1) 
-        x_ft = fft.rfft(x, n=seq_len, norm="ortho") 
-        x_ft = torch.stack([x_ft.real, x_ft.imag], dim=3)  
+        x = x.permute(0, 2, 1)
+        x_ft = fft.rfft(x, n=seq_len, norm="ortho")
+        x_ft = torch.stack([x_ft.real, x_ft.imag], dim=3)
 
         out_ft = self.complex_matmul_1d(
             x_ft[:, :, :self.modes], self.fourier_weight)
@@ -878,9 +906,9 @@ class SpectralConv1d(nn.Module):
 
         out_ft = torch.complex(out_ft[..., 0], out_ft[..., 1])
 
-        x = fft.irfft(out_ft, n=seq_len, norm="ortho")  
+        x = fft.irfft(out_ft, n=seq_len, norm="ortho")
 
-        x = x.permute(0, 2, 1) 
+        x = x.permute(0, 2, 1)
         x = self.activation(x + res)
 
         if self.return_freq:
@@ -890,8 +918,8 @@ class SpectralConv1d(nn.Module):
 
 
 class SpectralConv2d(nn.Module):
-    def __init__(self, in_dim, 
-                 out_dim, 
+    def __init__(self, in_dim,
+                 out_dim,
                  modes: int,  # number of fourier modes
                  n_grid=None,
                  dropout=0.1,
@@ -950,13 +978,13 @@ class SpectralConv2d(nn.Module):
         in_dim = self.in_dim
         out_dim = self.out_dim
         modes = self.modes
-    
-        x = x.view(-1, n, n, in_dim) 
-        res = self.linear(x)  
+
+        x = x.view(-1, n, n, in_dim)
+        res = self.linear(x)
         x = self.dropout(x)
 
-        x = x.permute(0, 3, 1, 2) 
-        x_ft = fft.rfft2(x, s=(n, n), norm=self.norm) 
+        x = x.permute(0, 3, 1, 2)
+        x_ft = fft.rfft2(x, s=(n, n), norm=self.norm)
         x_ft = torch.stack([x_ft.real, x_ft.imag], dim=4)
 
         out_ft = torch.zeros(batch_size, out_dim, n, n //
@@ -967,7 +995,7 @@ class SpectralConv2d(nn.Module):
             x_ft[:, :, -modes:, :modes], self.fourier_weight[1])
         out_ft = torch.complex(out_ft[..., 0], out_ft[..., 1])
 
-        x = fft.irfft2(out_ft, s=(n, n), norm=self.norm)  
+        x = fft.irfft2(out_ft, s=(n, n), norm=self.norm)
         x = x.permute(0, 2, 3, 1)
         x = self.activation(x + res)
 
