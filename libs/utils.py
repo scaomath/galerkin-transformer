@@ -248,30 +248,21 @@ def get_date():
     today = date.today()
     return today.strftime("%b-%d-%Y")
 
-def roc_auc_compute_fn(y_targets, y_preds):
-    '''
-    roc_auc func for torch tensors
-    '''
-    y_true = y_targets.cpu().numpy()
-    y_pred = y_preds.cpu().numpy()
-    return roc_auc_score(y_true, y_pred)
-
-def multiclass_accuracy(preds, targets):
-    '''
-    preds: (N_batch, N_class)
-    targets: (N_batch, )
-    '''
-    if preds.ndim > 1 and preds.size(-1) > 1:
-        preds=preds.argmax(axis=-1)
-    return (preds==targets).float().mean()
-
 def argmax(lst):
   return lst.index(max(lst))
 
+# def get_num_params(model):
+#     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
+#     params = sum([np.prod(p.size()) for p in model_parameters])
+#     return params
+
 def get_num_params(model):
     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
-    params = sum([np.prod(p.size()) for p in model_parameters])
-    return params
+    num_params = 0
+    for p in model_parameters:
+        # num_params += np.prod(p.size()+(2,) if p.is_complex() else p.size())
+        num_params += p.numel() * (1 + p.is_complex())
+    return num_params
 
 def reduce_mem_usage(df, verbose=True):
     numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']

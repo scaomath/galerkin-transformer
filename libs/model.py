@@ -630,6 +630,7 @@ class FourierTransformer(nn.Module):
         self.config = defaultdict(lambda: None, **kwargs)
         self._get_setting()
         self._initialize()
+        self.__name__ = self.attention_type.capitalize() + 'Transformer'
 
     def forward(self, node, edge, pos, grid=None, weight=None):
         '''
@@ -812,6 +813,7 @@ class FourierTransformer2D(nn.Module):
         self.config = defaultdict(lambda: None, **kwargs)
         self._get_setting()
         self._initialize()
+        self.__name__ = self.attention_type.capitalize() + 'Transformer2D'
 
     def forward(self, node, edge, pos, grid, weight=None):
         '''

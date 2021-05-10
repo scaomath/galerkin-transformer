@@ -695,7 +695,7 @@ class DarcyDataset(Dataset):
         if last_digit < 5:
             factor += 1e-2
         down_factor = (factor, factor)
-        n_m = round(n_f*factor)
+        n_m = round(n_f*factor)-1
         up_size = ((n_m, n_m), (n_f, n_f))
         return down_factor, up_size
 

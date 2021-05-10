@@ -136,7 +136,7 @@ def main():
     torch.cuda.empty_cache()
     model = FourierTransformer2D(**config)
     model = model.to(device)
-    print(f"\nModel: {model.__class__.__name__}\t number of params: {get_num_params(model)}\n")
+    print(f"\nModel: {model.__name__}\t Number of params: {get_num_params(model)}\n")
 
     epochs = args.epochs
     lr = args.lr

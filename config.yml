@@ -73,8 +73,8 @@ ex2_darcy:
   upscaler_activation: silu
   last_activation: True
   dropout: 0.0
-  downscaler_dropout: 0.1
+  downscaler_dropout: 0.05
   upscaler_dropout: 0.0
-  encoder_dropout: 0.0
+  encoder_dropout: 0.05
   decoder_dropout: 0
   debug: False
