@@ -10,8 +10,6 @@ from numpy.fft import fft
 from scipy.sparse import diags, csr_matrix
 from scipy.sparse import hstack as sparse_hstack
 from scipy.io import loadmat
-import h5py
-from sklearn.model_selection import KFold
 from tqdm.auto import tqdm
 from collections import OrderedDict
 from matplotlib import tri, rc, rcParams
@@ -38,35 +36,34 @@ EPOCH_SCHEDULERS = ['ReduceLROnPlateau', 'StepLR', 'MultiplicativeLR',
                     'MultiStepLR', 'ExponentialLR', 'LambdaLR']
 
 
-def get_seed(s, printout=True):
-    # rd.seed(s)
-    os.environ['PYTHONHASHSEED'] = str(s)
-    np.random.seed(s)
-    # pd.core.common.random_state(s)
-    # Torch
-    torch.manual_seed(s)
-    torch.cuda.manual_seed(s)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(s)
+# def get_seed(s, printout=True):
+#     # rd.seed(s)
+#     os.environ['PYTHONHASHSEED'] = str(s)
+#     np.random.seed(s)
+#     # Torch
+#     torch.manual_seed(s)
+#     torch.cuda.manual_seed(s)
+#     torch.backends.cudnn.deterministic = True
+#     torch.backends.cudnn.benchmark = False
+#     if torch.cuda.is_available():
+#         torch.cuda.manual_seed_all(s)
 
-    message = f'''
-    os.environ['PYTHONHASHSEED'] = str({s})
-    numpy.random.seed({s})
-    torch.manual_seed({s})
-    torch.cuda.manual_seed({s})
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all({s})
-    '''
-    if printout:
-        print("\n")
-        print(f"The following code snippets have been run.")
-        print("="*50)
-        print(message)
-        print("="*50)
+#     message = f'''
+#     os.environ['PYTHONHASHSEED'] = str({s})
+#     numpy.random.seed({s})
+#     torch.manual_seed({s})
+#     torch.cuda.manual_seed({s})
+#     torch.backends.cudnn.deterministic = True
+#     torch.backends.cudnn.benchmark = False
+#     if torch.cuda.is_available():
+#         torch.cuda.manual_seed_all({s})
+#     '''
+#     if printout:
+#         print("\n")
+#         print(f"The following code snippets have been run.")
+#         print("="*50)
+#         print(message)
+#         print("="*50)
 
 
 def clones(module, N):

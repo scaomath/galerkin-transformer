@@ -13,10 +13,8 @@ from time import time
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import psutil, platform, subprocess, re
 import torch
-from sklearn.metrics import roc_auc_score
 
 import ctypes
 import ctypes.util
@@ -111,7 +109,7 @@ def get_system():
     print("="*40, "Software Info", "="*40)
     print('Python     : ' + sys.version.split('\n')[0])
     print('Numpy      : ' + np.__version__)
-    print('Pandas     : ' + pd.__version__)
+    # print('Pandas     : ' + pd.__version__)
     print('PyTorch    : ' + torch.__version__)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
    
@@ -125,10 +123,9 @@ def get_system():
     print("="*30, "system info print done", "="*30)
 
 def get_seed(s, printout=True):
-    rd.seed(s)
+    # rd.seed(s)
     os.environ['PYTHONHASHSEED'] = str(s)
     np.random.seed(s)
-    pd.core.common.random_state(s)
     # Torch
     torch.manual_seed(s)
     torch.cuda.manual_seed(s)
