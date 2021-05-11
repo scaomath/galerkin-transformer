@@ -8,6 +8,7 @@ import torch
 import torch.nn.functional as F
 from scipy.sparse import csr_matrix, diags, identity
 from scipy.sparse import hstack as sparse_hstack
+from scipy import interpolate
 from torch import nn
 from torch.nn.modules.loss import _WeightedLoss
 from torch.utils.data import DataLoader, Dataset
@@ -430,11 +431,11 @@ class DarcyDataset(Dataset):
                  normalizer_x=None,
                  normalization=True,
                  renormalization=False,
-                 noise=0,
                  subsample_attn: int = 15,
                  subsample_nodes: int = 1,
                  subsample_inverse: int = 1,
                  subsample_method='nearest',
+                 subsample_method_inverse='average',
                  n_krylov: int = 3,
                  uniform: bool = True,
                  train_data=True,
@@ -445,16 +446,16 @@ class DarcyDataset(Dataset):
                  return_edge=False,
                  return_lap_only=True,
                  return_boundary=False,
+                 noise=0,
                  random_state=1127802):
         '''
         Darcy flow data from Li et al 2020
         https://github.com/zongyi-li/fourier_neural_operator
 
-        2d network size for subsampling to 85x85 grid: 2368001 
-        (complex param counts as two)
+        2d network size for subsampling to 85x85 grid: 2368001
         original grid size = 421*421
         Laplacian size = (421//subsample) * (421//subsample)
-        subsample = 2, 3, 5, 7, 10, 15
+        subsample = 2, 3, 5, 6, 7, 10, 12, 15
 
         Uniform (update Apr 2021): 
         node: node features, coefficient a, (N, n, n, 1)
@@ -469,9 +470,9 @@ class DarcyDataset(Dataset):
         self.n_grid_fine = 421  # finest resolution along x-, y- dim
         self.subsample_attn = subsample_attn  # subsampling for attn
         self.subsample_nodes = subsample_nodes  # subsampling for input and output
-        # subsample further for inverse output
-        self.subsample_inverse = subsample_inverse
+        self.subsample_inverse = subsample_inverse # subsample for inverse output
         self.subsample_method = subsample_method  # 'interp' or 'nearest'
+        self.subsample_method_inverse = subsample_method_inverse  # 'interp' or 'average'
         # sampling resolution for nodes subsampling along x-, y-
         self.n_grid = int(((self.n_grid_fine - 1)/self.subsample_attn) + 1)
         self.h = 1/self.n_grid_fine
@@ -512,7 +513,7 @@ class DarcyDataset(Dataset):
                 del data
                 gc.collect()
             except FileNotFoundError as e:
-                print("Please download the dataset from https://github.com/zongyi-li/fourier_neural_operator and put untar them in the data folder.")
+                print(r"Please download the dataset from https://github.com/zongyi-li/fourier_neural_operator and put untar them in the data folder.")
 
         data_len = self.get_data_len(len(a))
 
@@ -525,6 +526,7 @@ class DarcyDataset(Dataset):
         nodes, targets, targets_grad = self.get_data(a, u)
 
         self.coeff = nodes  # un-transformed coeffs
+        # pos and elem are already downsampled
         self.pos, self.elem = self.get_grid(self.n_grid)
         self.pos_fine = self.get_grid(self.n_grid_fine,
                                       subsample=self.subsample_nodes,
@@ -539,11 +541,18 @@ class DarcyDataset(Dataset):
         if self.inverse_problem:
             nodes, targets = targets, nodes
             if self.subsample_inverse > 1:
-                s_inv = self.subsample_inverse
-                targets = pooling_2d(targets.squeeze(),
-                                     kernel_size=(s_inv, s_inv), padding=True)
+                n_grid_inv = int(((self.n_grid_fine - 1)/self.subsample_inverse) + 1)
+                pos_inv = self.get_grid(n_grid_inv,
+                                    return_elem=False,
+                                    return_boundary=self.return_boundary)
+                if self.subsample_method_inverse == 'average':
+                    s_inv = self.subsample_inverse//self.subsample_nodes
+                    targets = pooling_2d(targets.squeeze(),
+                                        kernel_size=(s_inv, s_inv), padding=True)
+                elif self.subsample_method_inverse == 'interp':
+                    targets = self.get_interp2d(targets.squeeze(), self.pos_fine, pos_inv)
+                self.pos_fine = pos_inv
                 targets = targets[..., None]
-                self.pos_fine = self.pos_fine[::s_inv, ::s_inv]
 
         if self.train_data and self.normalization:
             self.normalizer_x = UnitGaussianNormalizer()
@@ -658,7 +667,6 @@ class DarcyDataset(Dataset):
                 x = x[::s, ::s][1:-1, 1:-1]
                 y = y[::s, ::s][1:-1, 1:-1]
             grid = np.stack([x, y], axis=-1)
-            # grid is DoF, excluding boundary (n, n, 2), or (n-2, n-2, 2)
             return grid
 
     @staticmethod
@@ -698,6 +706,19 @@ class DarcyDataset(Dataset):
         n_m = round(n_f*factor)-1
         up_size = ((n_m, n_m), (n_f, n_f))
         return down_factor, up_size
+
+    @staticmethod
+    def get_interp2d(x, grid_f, grid_c):
+        '''
+        interpolate (N, n_f, n_f) to (N, n_c, n_c)
+        '''
+        x_f, y_f = grid_f[...,0], grid_f[...,1]
+        x_c, y_c = grid_c[...,0], grid_c[...,1]
+        x_interp = []
+        for xi in x:
+            xi_interp = interpolate.interp2d(x_f, y_f, xi)
+            x_interp.append(xi_interp(x_c, y_c))
+        return np.stack(x_interp, axis=0)
 
     def get_edge(self, a):  # a: diffusion constant for all, not downsampled
         # (x,y), elements downsampled if applicable

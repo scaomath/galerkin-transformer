@@ -37,6 +37,67 @@ def get_data(train_portion=1024,
                               drop_last=False,**kwargs)
     return train_loader, valid_loader
 
+def train_batch_burgers(model, loss_func, data, optimizer, lr_scheduler, device, grad_clip=0.999):
+    optimizer.zero_grad()
+    x, edge = data["node"].to(device), data["edge"].to(device)
+    pos, grid = data['pos'].to(device), data['grid'].to(device)
+    out_ = model(x, edge, pos, grid)
+
+    if isinstance(out_, dict):
+        out = out_['preds']
+        y_ortho = out_['preds_ortho']
+    elif isinstance(out_, tuple):
+        out = out_[-1]
+        y_ortho = None
+
+    target = data["target"].to(device)
+    u, up = target[..., 0], target[..., 1]  # the targets are the first two
+
+    if out.size(2) == 2:
+        u_pred, up_pred = out[..., 0], out[..., 1]
+        loss, reg, ortho, _ = loss_func(
+            u_pred, u, up_pred, up, preds_ortho=y_ortho)
+    elif out.size(2) == 1:
+        u_pred = out[..., 0]
+        loss, reg, ortho, _ = loss_func(
+            u_pred, u, targets_prime=up, preds_ortho=y_ortho)
+    loss = loss + reg + ortho
+    loss.backward()
+    nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+    optimizer.step()
+    if lr_scheduler:
+        lr_scheduler.step()
+    try:
+        up_pred = out[..., 1]
+    except:
+        up_pred = u_pred
+
+    return (loss.item(), reg.item(), ortho.item()), u_pred, up_pred
+
+
+def validate_epoch_burgers(model, metric_func, valid_loader, device):
+    model.eval()
+    metric_val = []
+    for _, data in enumerate(valid_loader):
+        with torch.no_grad():
+            x, edge = data["node"].to(device), data["edge"].to(device)
+            pos, grid = data['pos'].to(device), data['grid'].to(device)
+            out_ = model(x, edge, pos, grid)
+
+            if isinstance(out_, dict):
+                u_pred = out_['preds'][..., 0]
+            elif isinstance(out_, tuple):
+                u_pred = out_[-1][..., 0]
+
+            target = data["target"].to(device)
+            u = target[..., 0]
+            _, _, _, metric = metric_func(u_pred, u)
+            try:
+                metric_val.append(metric.item())
+            except:
+                metric_val.append(metric)
+
+    return dict(metric=np.mean(metric_val, axis=0))
 
 def main():
 

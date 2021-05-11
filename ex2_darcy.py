@@ -12,6 +12,62 @@ batch_size = 8
 val_batch_size = 4
 
 
+def train_batch_darcy(model, loss_func, data, optimizer, lr_scheduler, device, grad_clip=0.99):
+    optimizer.zero_grad()
+    a, x, edge = data["coeff"].to(device), data["node"].to(
+        device), data["edge"].to(device)
+    pos, grid = data['pos'].to(device), data['grid'].to(device)
+    u, gradu = data["target"].to(device), data["target_grad"].to(device)
+
+    out_ = model(x, edge, pos=pos, grid=grid)
+    if isinstance(out_, dict):
+        out = out_['preds']
+    elif isinstance(out_, tuple):
+        out = out_[-1]
+
+    if out.ndim == 4:
+        u_pred, pred_grad, target = out[..., 0], out[..., 1:], u[..., 0]
+        loss, reg, _, _ = loss_func(u_pred, target, pred_grad, gradu, K=a)
+    elif out.ndim == 3:
+        u_pred, u = out[..., 0], u[..., 0]
+        loss, reg, _, _ = loss_func(u_pred, u, targets_prime=gradu, K=a)
+    loss = loss + reg
+    loss.backward()
+    nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+    optimizer.step()
+    if lr_scheduler:
+        lr_scheduler.step()
+    try:
+        up_pred = out[..., 1:]
+    except:
+        up_pred = u_pred
+
+    return (loss.item(), reg.item()), u_pred, up_pred
+
+
+def validate_epoch_darcy(model, metric_func, valid_loader, device):
+    model.eval()
+    metric_val = []
+    for _, data in enumerate(valid_loader):
+        with torch.no_grad():
+            x, edge = data["node"].to(device), data["edge"].to(device)
+            pos, grid = data['pos'].to(device), data['grid'].to(device)
+            out_ = model(x, edge, pos=pos, grid=grid)
+            if isinstance(out_, dict):
+                out = out_['preds']
+            elif isinstance(out_, tuple):
+                out = out_[-1]
+            u_pred = out[..., 0]
+            target = data["target"].to(device)
+            u = target[..., 0]
+            _, _, metric, _ = metric_func(u_pred, u)
+            try:
+                metric_val.append(metric.item())
+            except:
+                metric_val.append(metric)
+
+    return dict(metric=np.mean(metric_val, axis=0))
+
 def get_data(train_len=1024,
              valid_len=100,
              random_state=SEED,
@@ -83,7 +139,8 @@ def main():
     device = torch.device('cuda' if cuda else 'cpu')
     kwargs = {'pin_memory': True} if cuda else {}
 
-    get_seed(args.seed)
+    torch.manual_seed(seed=args.seed)
+    torch.cuda.manual_seed(seed=args.seed)
 
     train_loader, valid_loader, train_dataset = get_data(
         subsample_nodes=args.subsample_nodes,
