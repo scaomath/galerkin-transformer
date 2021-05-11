@@ -540,6 +540,7 @@ class DarcyDataset(Dataset):
         if self.inverse_problem:
             nodes, targets = targets, nodes
             if self.subsample_inverse > 1:
+                n_grid = int(((self.n_grid_fine - 1)/self.subsample_nodes) + 1)
                 n_grid_inv = int(((self.n_grid_fine - 1)/self.subsample_inverse) + 1)
                 pos_inv = self.get_grid(n_grid_inv,
                                     return_elem=False,
@@ -549,7 +550,9 @@ class DarcyDataset(Dataset):
                     targets = pooling_2d(targets.squeeze(),
                                         kernel_size=(s_inv, s_inv), padding=True)
                 elif self.subsample_method_inverse == 'interp':
-                    targets = self.get_interp2d(targets.squeeze(), self.pos_fine, pos_inv)
+                    targets = self.get_interp2d(targets.squeeze(), 
+                                                n_grid,
+                                                n_grid_inv)
                 self.pos_fine = pos_inv
                 targets = targets[..., None]
 
@@ -565,7 +568,7 @@ class DarcyDataset(Dataset):
                     x=targets[:, 1:-1, 1:-1, :])
         elif self.normalization:
             nodes = self.normalizer_x.transform(nodes)
-
+        
         if self.noise > 0:
             nodes += self.noise*np.random.randn(*nodes.shape)
 
@@ -609,18 +612,22 @@ class DarcyDataset(Dataset):
             nodes = a.reshape(batch_size, n, n, 1)
 
         targets = u  # (N, 421, 421)
-        targets_gradx, targets_grady = self.central_diff(
-            targets, self.h)  # (N, n_f, n_f)
-        targets_gradx = targets_gradx[:, ::s, ::s]
-        targets_grady = targets_grady[:, ::s, ::s]
         targets = targets[:, ::s, ::s].reshape(batch_size, n, n, 1)
 
-        # targets_gradx = targets_gradx.unsqueeze(-1)
-        # targets_grady = targets_grady.unsqueeze(-1)
-        # cat = torch.cat if torch.is_tensor(targets_gradx) else np.concatenate
-        # grad = cat([targets_gradx, targets_grady], -1) # (N, 2*(n_grid-2)**2)
-        targets_grad = np.stack(
-            [targets_gradx, targets_grady], axis=-1)  # (N, n, n, 2)
+        if not self.inverse_problem:
+            targets_gradx, targets_grady = self.central_diff(
+                targets, self.h)  # (N, n_f, n_f)
+            targets_gradx = targets_gradx[:, ::s, ::s]
+            targets_grady = targets_grady[:, ::s, ::s]
+
+            # targets_gradx = targets_gradx.unsqueeze(-1)
+            # targets_grady = targets_grady.unsqueeze(-1)
+            # cat = torch.cat if torch.is_tensor(targets_gradx) else np.concatenate
+            # grad = cat([targets_gradx, targets_grady], -1) # (N, 2*(n_grid-2)**2)
+            targets_grad = np.stack(
+                [targets_gradx, targets_grady], axis=-1)  # (N, n, n, 2)
+        else:
+            targets_grad = np.zeros((batch_size, 1, 1, 2))
 
         return nodes, targets, targets_grad
 
@@ -707,15 +714,15 @@ class DarcyDataset(Dataset):
         return down_factor, up_size
 
     @staticmethod
-    def get_interp2d(x, grid_f, grid_c):
+    def get_interp2d(x, n_f, n_c):
         '''
         interpolate (N, n_f, n_f) to (N, n_c, n_c)
         '''
-        x_f, y_f = grid_f[...,0], grid_f[...,1]
-        x_c, y_c = grid_c[...,0], grid_c[...,1]
+        x_f, y_f = np.linspace(0, 1, n_f), np.linspace(0, 1, n_f)
+        x_c, y_c = np.linspace(0, 1, n_c), np.linspace(0, 1, n_c)
         x_interp = []
-        for xi in x:
-            xi_interp = interpolate.interp2d(x_f, y_f, xi)
+        for i in range(len(x)):
+            xi_interp = interpolate.interp2d(x_f, y_f, x[i])
             x_interp.append(xi_interp(x_c, y_c))
         return np.stack(x_interp, axis=0)
 
@@ -782,10 +789,7 @@ class DarcyDataset(Dataset):
             - target_grad, gradient of solution
         '''
         pos_dim = 2
-        # uniform grid for all samples (n_s*n_s, 2)
         pos = self.pos[:, :pos_dim]
-        # uniform grid fine for all samples (n, n, 2)
-        # grid = self.pos_fine[..., :pos_dim]
         if self.return_edge and not self.online_features:
             edges = self.edge_features[index]
 
@@ -795,7 +799,6 @@ class DarcyDataset(Dataset):
                 edges = np.asarray(
                     [m.toarray().astype(np.float32) for m in edges])
 
-            # (edge_feats, n_s, n_s) -> (n_s, n_s, edge_feats)
             edge_features = torch.from_numpy(edges.transpose(1, 2, 0))
 
             mass = self.mass_features[index].toarray().astype(np.float32)
@@ -805,11 +808,10 @@ class DarcyDataset(Dataset):
                 1, self.n_grid_fine, self.n_grid_fine, -1)
             if self.normalization:
                 a = self.normalizer_x.inverse_transform(a)
-            a = a[..., 0]  # this can handle multi-dim node features
+            a = a[..., 0]
             edges, mass = self.get_edge(a)
             edges = np.asarray([m.toarray().astype(np.float32)
                                for m in edges[0]])
-            # (edge_feats, n_s, n_s) -> (n_s, n_s, edge_feats)
             edge_features = torch.from_numpy(edges.transpose(1, 2, 0))
 
             mass = mass[0].toarray().astype(np.float32)
@@ -818,11 +820,11 @@ class DarcyDataset(Dataset):
             edge_features = torch.tensor([1.0])
             mass_features = torch.tensor([1.0])
         if self.subsample_attn < 5:
-            pos = torch.tensor([1.0])  # place holder
+            pos = torch.tensor([1.0]) 
         else:
-            pos = torch.from_numpy(pos)  # (n_s*n_s, 2)
+            pos = torch.from_numpy(pos)  
 
-        grid = torch.from_numpy(self.pos_fine)  # fine grid (n, n, 2)
+        grid = torch.from_numpy(self.pos_fine)  
         node_features = torch.from_numpy(self.node_features[index])
         coeff = torch.from_numpy(self.coeff[index])
         target = torch.from_numpy(self.target[index])
@@ -836,7 +838,6 @@ class DarcyDataset(Dataset):
                     mass=mass_features.float(),
                     target=target.float(),
                     target_grad=target_grad.float())
-
 
 class WeightedL2Loss(_WeightedLoss):
     def __init__(self,

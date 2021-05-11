@@ -905,7 +905,6 @@ class FourierTransformer2D(nn.Module):
             self.num_ft_layers += 1
         self.attention_types = ['fourier', 'integral', 'local', 'global',
                                 'cosine', 'galerkin', 'linear', 'softmax']
-        self.scaler = self.upscaler_size and self.downscaler_size
 
     def _get_graph(self):
         if self.feat_extract_type == 'gcn' and self.num_feat_layers > 0:
@@ -928,13 +927,17 @@ class FourierTransformer2D(nn.Module):
             self.feat_extract = Identity()
 
     def _get_scaler(self):
-        if self.scaler:
+        if self.downscaler_size:
             self.downscaler = DownScaler(in_dim=self.node_feats,
                                          out_dim=self.n_hidden,
                                          downsample_mode=self.downsample_mode,
                                          interp_size=self.downscaler_size,
                                          dropout=self.downscaler_dropout,
                                          activation_type=self.downscaler_activation)
+        else:
+            self.downscaler = Identity(in_features=self.node_feats+self.spacial_dim,
+                                       out_features=self.n_hidden)
+        if self.upscaler_size:
             self.upscaler = UpScaler(in_dim=self.n_hidden,
                                      out_dim=self.n_hidden,
                                      upsample_mode=self.upsample_mode,
@@ -942,8 +945,6 @@ class FourierTransformer2D(nn.Module):
                                      dropout=self.upscaler_dropout,
                                      activation_type=self.upscaler_activation)
         else:
-            self.downscaler = Identity(in_features=self.node_feats+self.spacial_dim,
-                                       out_features=self.n_hidden)
             self.upscaler = Identity()
 
     def _get_encoder(self):
