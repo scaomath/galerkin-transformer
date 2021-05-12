@@ -703,11 +703,11 @@ class DarcyDataset(Dataset):
     @staticmethod
     def get_scaler_sizes(n_f, n_c):
         factor = np.sqrt(n_c/n_f)
-        factor = np.round(factor, 3)
+        factor = np.round(factor, 4)
         last_digit = float(str(factor)[-1])
-        factor = np.round(factor, 2)
+        factor = np.round(factor, 3)
         if last_digit < 5:
-            factor += 1e-2
+            factor += 5e-3
         down_factor = (factor, factor)
         n_m = round(n_f*factor)-1
         up_size = ((n_m, n_m), (n_f, n_f))

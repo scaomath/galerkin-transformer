@@ -829,7 +829,7 @@ class FourierTransformer2D(nn.Module):
         x_ortho = []
         attn_weights = []
 
-        if not self.scaler:
+        if not self.downscaler_size:
             node = torch.cat(
                 [node, pos.contiguous().view(bsz, n_s, n_s, -1)], dim=-1)
         x = self.downscaler(node)

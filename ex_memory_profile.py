@@ -27,7 +27,7 @@ def main():
     config['layer_norm'] = args.reg_layernorm
     config['attn_norm'] = not args.reg_layernorm
 
-    for attn_type in ['fourier', 'softmax', 'galerkin', 'linear']:
+    for attn_type in ['softmax', 'fourier', 'linear', 'galerkin',]:
         config['attention_type'] = attn_type
         torch.cuda.empty_cache()
         model = FourierTransformer(**config)
