@@ -44,9 +44,9 @@ class FourierTransformerEncoderLayer(nn.Module):
                  norm_type='layer',
                  batch_norm=False,
                  attn_weight=False,
-                 xavier_init=1e-4,
-                 diagonal_weight: float = 1.,
-                 symmetric_init=True,
+                 xavier_init: float=1e-2,
+                 diagonal_weight: float = 1e-2,
+                 symmetric_init=False,
                  residual_type='add',
                  activation_type='relu',
                  dropout=0.1,
@@ -76,7 +76,8 @@ class FourierTransformerEncoderLayer(nn.Module):
         if layer_norm:
             self.layer_norm1 = nn.LayerNorm(d_model, eps=1e-7)
             self.layer_norm2 = nn.LayerNorm(d_model, eps=1e-7)
-
+        if dim_feedforward is None:
+            dim_feedforward = 2*d_model
         self.ff = FeedForward(d_model,
                               dim_feedforward=dim_feedforward,
                               batch_norm=batch_norm,
@@ -90,6 +91,7 @@ class FourierTransformerEncoderLayer(nn.Module):
 
         self.debug = debug
         self.attn_weight = attn_weight
+        self.__name__ = attention_type.capitalize() + 'TransformerEncoderLayer'
 
     def forward(self, x, pos=None, weight=None):
         '''

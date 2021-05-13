@@ -112,9 +112,9 @@ def main():
                         help='input fine grid sampling from 421x421 (default: 3 i.e., 141x141 grid)')
     parser.add_argument('--subsample-attn', type=int, default=10, metavar='subsample_attn',
                         help='input coarse grid sampling from 421x421 (default: 10 i.e., 43x43 grid)')
-    parser.add_argument('--batch-size', type=int, default=8, metavar='n_b',
+    parser.add_argument('--batch-size', type=int, default=8, metavar='N',
                         help='input batch size for training (default: 8)')
-    parser.add_argument('--val-batch-size', type=int, default=4, metavar='n_b',
+    parser.add_argument('--val-batch-size', type=int, default=4, metavar='N',
                         help='input batch size for validation (default: 4)')
     parser.add_argument('--attn-type', type=str, default='galerkin', metavar='attn_type',
                         help='input attention type for encoders (possile: fourier (alias integral, local), galerkin (alias global), softmax (official PyTorch implementation), linear (standard Q(K^TV) with softmax), default: galerkin)')

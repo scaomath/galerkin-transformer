@@ -12,6 +12,7 @@ subsample_nodes = 2
 batch_size = 4
 val_batch_size = 4
 
+
 def get_data(train_len=1024,
              valid_len=100,
              random_state=SEED,
@@ -67,9 +68,9 @@ def main():
                         help='input fine grid sampling from 421x421 (default: 3 i.e., 211x211 grid)')
     parser.add_argument('--subsample-attn', type=int, default=6, metavar='subsample_attn',
                         help='input coarse grid sampling from 421x421 (default: 6 i.e., 71x71 grid)')
-    parser.add_argument('--batch-size', type=int, default=4, metavar='n_b',
+    parser.add_argument('--batch-size', type=int, default=4, metavar='N',
                         help='input batch size for training (default: 4)')
-    parser.add_argument('--val-batch-size', type=int, default=4, metavar='n_b',
+    parser.add_argument('--val-batch-size', type=int, default=4, metavar='N',
                         help='input batch size for validation (default: 4)')
     parser.add_argument('--attn-type', type=str, default='galerkin', metavar='attn_type',
                         help='input attention type for encoders (possile: fourier (alias integral, local), galerkin (alias global), softmax (official PyTorch implementation), linear (standard Q(K^TV) with softmax), default: galerkin)')
@@ -93,7 +94,7 @@ def main():
     cuda = not args.no_cuda and torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     kwargs = {'pin_memory': True} if cuda else {}
-    noise = args.noise
+
     torch.manual_seed(seed=args.seed)
     torch.cuda.manual_seed(seed=args.seed)
 
@@ -102,7 +103,7 @@ def main():
         subsample_attn=args.subsample_attn,
         batch_size=args.batch_size,
         val_batch_size=args.val_batch_size,
-        noise=noise,
+        noise=args.noise,
         **kwargs)
     n_grid = int(((421 - 1)/args.subsample_nodes) + 1)
     n_grid_c = int(((421 - 1)/args.subsample_attn) + 1)

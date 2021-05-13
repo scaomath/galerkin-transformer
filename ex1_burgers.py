@@ -105,9 +105,9 @@ def main():
     parser = argparse.ArgumentParser(description='Example 1: Burgers equation')
     parser.add_argument('--subsample', type=int, default=4, metavar='subsample',
                         help='input sampling from 8192 (default: 4 i.e., 2048 grid)')
-    parser.add_argument('--batch-size', type=int, default=8, metavar='n_b',
+    parser.add_argument('--batch-size', type=int, default=8, metavar='N',
                         help='input batch size for training (default: 8)')
-    parser.add_argument('--val-batch-size', type=int, default=4, metavar='n_b',
+    parser.add_argument('--val-batch-size', type=int, default=4, metavar='N',
                         help='input batch size for validation (default: 4)')
     parser.add_argument('--attn-type', type=str, default='fourier', metavar='attn_type',
                         help='input attention type for encoders (possile: fourier (alias integral, local), galerkin (alias global), softmax (official PyTorch implementation), linear (standard Q(K^TV) with softmax), default: fourier)')
