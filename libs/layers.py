@@ -79,9 +79,7 @@ class Conv2dResBlock(nn.Module):
     '''
     Conv2d + a residual block
     https://github.com/pytorch/vision/blob/master/torchvision/models/resnet.py
-    Modified from ResNet's basic block, one conv less
-    (-1, in_dim, S, S) -> (-1, out_dim, S, S)
-    No batchnorm
+    Modified from ResNet's basic block, one conv less, no batchnorm
     '''
 
     def __init__(self, in_dim, out_dim,
@@ -220,12 +218,6 @@ class GraphAttention(nn.Module):
         self.leakyrelu = nn.LeakyReLU(self.alpha)
 
     def forward(self, node, adj):
-        '''
-        input: node feats (-1, seq_len, n_feats)
-               edge feats (-1, seq_len, seq_len), only adjacency matrix (Graph lap okay)
-
-        output: (-1, seq_len, n_feats)
-        '''
         h = torch.matmul(node, self.W)
         bsz, seq_len = h.size(0), h.size(1)
 
@@ -607,12 +599,7 @@ def linear_attention(query, key, value,
 class SimpleAttention(nn.Module):
     '''
     The attention is using a vanilla (QK^T)V or Q(K^T V) with no softmax
-    Just an encoder model
-    slighly different from the official pytorch implementation
-
-    pytorch official implementation has seq_len in dim=0
-    attn_output: (L, N, E) where L is the target sequence length, N is the batch size, E is the embedding dimension.
-    attn_output_weights: (N, L, S) where N is the batch size, L is the target sequence length, S is the source sequence length.
+    For an encoder layer, the tensor size is slighly different from the official pytorch implementation
 
     attn_types: 
         - fourier: integral, local
@@ -621,9 +608,9 @@ class SimpleAttention(nn.Module):
         - softmax: classic softmax attention
 
     In this implementation, output is (N, L, E).
-    batch_first added in pull request: https://github.com/pytorch/pytorch/pull/55285
+    batch_first will be added in the next PyTorch: https://github.com/pytorch/pytorch/pull/55285
 
-    Reference: modified from
+    Reference: code base modified from
     https://nlp.seas.harvard.edu/2018/04/03/attention.html
     - added xavier init
     - added layer norm switch
@@ -634,7 +621,7 @@ class SimpleAttention(nn.Module):
                  pos_dim: int = 1,
                  attention_type='fourier',
                  dropout=0.1,
-                 xavier_init=1e-4,
+                 xavier_init=1e-2,
                  diagonal_weight=1e-1,
                  symmetric_init=False,
                  norm=False,
@@ -662,22 +649,18 @@ class SimpleAttention(nn.Module):
                         [copy.deepcopy(nn.InstanceNorm1d(self.d_k)) for _ in range(n_head)])
                 elif norm_type == 'layer':
                     self.norm_K = nn.ModuleList(
-                        [copy.deepcopy(nn.LayerNorm(self.d_k)) for _ in range(n_head)])
+                        [copy.deepcopy(nn.LayerNorm(self.d_k, eps=1e-7)) for _ in range(n_head)])
                     self.norm_V = nn.ModuleList(
-                        [copy.deepcopy(nn.LayerNorm(self.d_k)) for _ in range(n_head)])
+                        [copy.deepcopy(nn.LayerNorm(self.d_k, eps=1e-7)) for _ in range(n_head)])
             else:
                 self.norm_K = nn.ModuleList(
-                    [copy.deepcopy(nn.LayerNorm(self.d_k)) for _ in range(n_head)])
+                    [copy.deepcopy(nn.LayerNorm(self.d_k, eps=1e-7)) for _ in range(n_head)])
                 self.norm_Q = nn.ModuleList(
-                    [copy.deepcopy(nn.LayerNorm(self.d_k)) for _ in range(n_head)])
+                    [copy.deepcopy(nn.LayerNorm(self.d_k, eps=1e-7)) for _ in range(n_head)])
         self.add_norm = norm
         self.norm_type = norm_type
 
         if pos_dim > 0:
-            '''
-            map concated all heads output with extra pos encoding dim
-            back to d_model
-            '''
             self.fc = nn.Linear(d_model + n_head*pos_dim, d_model)
 
         self.attn_weight = None

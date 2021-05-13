@@ -137,6 +137,8 @@ class TransformerEncoderLayer(nn.Module):
         - add a layer norm switch
         - add an attn_weight output switch
         - batch first
+        batch_first will be supported in the next version PyTorch
+        https://github.com/pytorch/pytorch/pull/55285
     """
 
     def __init__(self, d_model, nhead,
@@ -216,6 +218,7 @@ class TransformerEncoderWrapper(nn.Module):
         TransformerEncoder's input and output shapes follow
         those of the encoder_layer fed into as this is essentially a wrapper
 
+
     Args:
         encoder_layer: an instance of the TransformerEncoderLayer() class (required).
         num_layers: the number of sub-encoder-layers in the encoder (required).
@@ -274,6 +277,9 @@ class GCN(nn.Module):
         super(GCN, self).__init__()
         '''
         A simple GCN, a wrapper for Kipf and Weiling's code
+        learnable edge features similar to 
+        Graph Transformer https://arxiv.org/abs/1911.06455
+        but using neighbor agg
         '''
         self.edge_learner = EdgeEncoder(out_dim=out_features,
                                         edge_feats=edge_feats,
@@ -412,9 +418,9 @@ class PointwiseRegressor(nn.Module):
 class SpectralRegressor(nn.Module):
     def __init__(self, in_dim,
                  n_hidden,
-                 freq_dim,  # number of frequency features
-                 out_dim,  # number of target dim
-                 modes: int,  # number of fourier modes
+                 freq_dim,
+                 out_dim,
+                 modes: int,
                  num_spectral_layers: int = 2,
                  n_grid=None,
                  dim_feedforward=None,
@@ -433,7 +439,7 @@ class SpectralRegressor(nn.Module):
         https://github.com/zongyi-li/fourier_neural_operator/blob/master/fourier_2d.py
         A new implementation incoporating all spacial-based FNO
         in_dim: input dimension, (either n_hidden or spacial dim)
-        n_hidden: number of hidden features out from attention to the fourier conv or 
+        n_hidden: number of hidden features out from attention to the fourier conv
         '''
         if spacial_dim == 2:  # 2d, function + (x,y)
             spectral_conv = SpectralConv2d
@@ -576,7 +582,7 @@ class UpScaler(nn.Module):
                  debug=False):
         super(UpScaler, self).__init__()
         '''
-        A wrapper for deConv2d upscaler
+        A wrapper for DeConv2d upscaler or interpolation upscaler
         Deconv: Conv1dTranspose
         Interp: interp->conv->interp
         '''
