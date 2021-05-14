@@ -43,11 +43,11 @@ class BurgersDataset(Dataset):
                  random_state=1127802,
                  debug=False):
         r'''
-        Burger's data from Li et al 2020
+        PyTorch dataset overhauled for Burger's data from Li et al 2020
         https://github.com/zongyi-li/fourier_neural_operator
 
-        1D network size n_hidden = 64, 16 modes: 549569
-        Error \approx 1e-2 after 100 epochs after subsampling to 512
+        FNO1d network size n_hidden = 64, 16 modes: 549569
+        Benchmark: error \approx 1e-2 after 100 epochs after subsampling to 512
         subsampling = 2**3 #subsampling rate
         h = 2**13 // sub #total grid size divided by the subsampling rate
 
@@ -61,7 +61,6 @@ class BurgersDataset(Dataset):
         if subsample > 1:
             assert subsample % 2 == 0
         self.subsample = subsample
-        # whether to return super solution output = 1 then no super res
         self.super_resolution = super_resolution
         self.supsample = subsample//super_resolution
         self.n_grid_fine = n_grid_fine  # finest resolution
@@ -69,7 +68,6 @@ class BurgersDataset(Dataset):
         self.h = 1/n_grid_fine
         self.uniform = uniform
         self.return_downsample_grid = return_downsample_grid
-        # whether to return a downsampled grid only for pos
         self.train_data = train_data
         self.train_portion = train_portion
         self.valid_portion = valid_portion
@@ -79,7 +77,6 @@ class BurgersDataset(Dataset):
         self.random_sampling = random_sampling
         self.random_state = random_state
         self.online_features = online_features
-        # whether to generate edge features on the go for __getitem__()
         self.edge_features = None  # failsafe
         self.mass_features = None
         self.return_edge = return_edge
@@ -96,13 +93,12 @@ class BurgersDataset(Dataset):
 
     def _initialize(self):
         data = 'train' if self.train_data else 'valid'
-        print(f"Loading {self.data_path.split('/')[-1]} for {data}.")
-        data = loadmat(self.data_path)
-        # raw data, 2048 samples, 8192 resolution
-        x_data = data['a']
-        y_data = data['u']
-        del data
-        gc.collect()
+        with timer(f"Loading {self.data_path.split('/')[-1]} for {data}."):
+            data = loadmat(self.data_path)
+            x_data = data['a']
+            y_data = data['u']
+            del data
+            gc.collect()
 
         train_len, valid_len = self.train_test_split(len(x_data))
 
@@ -115,10 +111,8 @@ class BurgersDataset(Dataset):
 
         get_data = self.get_uniform_data if self.uniform else self.get_nonuniform_data
         grid, grid_fine, nodes, targets = get_data(x_data, y_data)
-        # grid is nonuniform is applicable
 
         if not self.online_features and self.return_edge:
-            # grid is the correct grid to generate edge matrix
             edge_features = []
             mass_features = []
             for i in tqdm(range(self.n_samples)):
@@ -128,7 +122,6 @@ class BurgersDataset(Dataset):
             self.edge_features = np.asarray(edge_features, dtype=np.float32)
             self.mass_features = np.asarray(mass_features, dtype=np.float32)
 
-        # (N, S, E)
         self.node_features = nodes[..., None] if nodes.ndim == 2 else nodes
         # self.pos = np.c_[grid[...,None], grid[...,None]] #(N, S, 2)
         self.n_features = self.node_features.shape[-1]
@@ -136,7 +129,6 @@ class BurgersDataset(Dataset):
         self.pos_fine = grid_fine[..., None]
         # (N, S, T)
         self.target = targets[..., None] if targets.ndim == 2 else targets
-        # self.inference = self.target is None
 
     def _set_seed(self):
         s = self.random_state
@@ -398,6 +390,8 @@ class UnitGaussianNormalizer:
         '''
         modified from utils3.py in 
         https://github.com/zongyi-li/fourier_neural_operator
+            - .to() has a return to polymorph the torch behavior
+            - naming convention changed to sklearn scalers 
         '''
         self.eps = eps
 
@@ -448,10 +442,10 @@ class DarcyDataset(Dataset):
                  noise=0,
                  random_state=1127802):
         '''
-        Darcy flow data from Li et al 2020
+        PyTorch dataset overhauled for the Darcy flow data from Li et al 2020
         https://github.com/zongyi-li/fourier_neural_operator
 
-        2d network size for subsampling to 85x85 grid: 2368001
+        FNO2d network size: 2368001
         original grid size = 421*421
         Laplacian size = (421//subsample) * (421//subsample)
         subsample = 2, 3, 5, 6, 7, 10, 12, 15
@@ -726,8 +720,14 @@ class DarcyDataset(Dataset):
             x_interp.append(xi_interp(x_c, y_c))
         return np.stack(x_interp, axis=0)
 
-    def get_edge(self, a):  # a: diffusion constant for all, not downsampled
-        # (x,y), elements downsampled if applicable
+    def get_edge(self, a):  
+        '''
+        Modified from Long Chen's iFEM routine in 2D
+        https://github.com/lyc102/ifem
+        Python port: https://github.com/scaomath/python-ifem
+        a: diffusion constant for all, not downsampled
+        (x,y), elements downsampled if applicable
+        '''
         grid, elem = self.pos, self.elem
         Dphi, area = self.get_grad_tri(grid, elem)
         ks = self.subsample_attn//self.subsample_nodes

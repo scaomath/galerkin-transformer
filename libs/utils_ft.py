@@ -122,6 +122,7 @@ def pooling_2d(mat, kernel_size: tuple = (2, 2), method='mean', padding=False):
 
     Modified from https://stackoverflow.com/a/49317610/622119
     to handle the case of batch edge matrices
+    CC BY-SA 3.0
     '''
 
     m, n = mat.shape[-2:]

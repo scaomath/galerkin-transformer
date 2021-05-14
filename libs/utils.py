@@ -27,6 +27,7 @@ from IPython import get_ipython
 def is_interactive():
     '''
     https://stackoverflow.com/a/39662359/622119
+    License: CC BY-SA 3.0
     '''
     try:
         shell = get_ipython().__class__.__name__
@@ -54,11 +55,12 @@ SEED = 1127802
 
 def get_size(bytes, suffix='B'):
     ''' 
-    by Fred Cirera,  https://stackoverflow.com/a/1094933/1870254, modified
-    Scale bytes to its proper format
+    by Fred Cirera, modified in https://stackoverflow.com/a/1094933/1870254
+    Modified in this repo to scale bytes to its proper format
     e.g:
         1253656 => '1.20MiB'
         1253656678 => '1.17GiB'
+    License: CC BY-SA 3.0
     '''
     for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
         if abs(bytes) < 1024.0:
@@ -73,6 +75,10 @@ def get_file_size(filename):
 import os, platform, subprocess, re
 
 def get_processor_name():
+    '''
+    https://stackoverflow.com/a/13078519/622119
+    Licence: CC By-SA 3.0
+    '''
     if platform.system() == "Windows":
         return platform.processor()
     elif platform.system() == "Darwin":
@@ -275,6 +281,7 @@ class DotDict(dict):
     https://stackoverflow.com/a/23689767/622119
     https://stackoverflow.com/a/36968114/622119
     dot.notation access to dictionary attributes
+    License: CC BY-SA 3.0.
     """
     def __getattr__(self, attr):
         return self.get(attr)
