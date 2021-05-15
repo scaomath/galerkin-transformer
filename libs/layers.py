@@ -843,6 +843,7 @@ class SpectralConv1d(nn.Module):
 
         '''
         Modified Zongyi Li's Spectral1dConv code
+        https://github.com/zongyi-li/fourier_neural_operator/blob/master/fourier_1d.py
         '''
 
         self.linear = nn.Linear(in_dim, out_dim)  # for residual
@@ -914,6 +915,7 @@ class SpectralConv2d(nn.Module):
 
         '''
         Modified Zongyi Li's SpectralConv2d code
+        https://github.com/zongyi-li/fourier_neural_operator/blob/master/fourier_2d.py
         '''
         self.in_dim = in_dim
         self.out_dim = out_dim
