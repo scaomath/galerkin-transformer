@@ -1,30 +1,31 @@
 import math
-import sys
 import os
-import numpy as np
-from numpy.core.numeric import identity
-import torch
-from torch import nn
-from torch.optim.lr_scheduler import _LRScheduler, OneCycleLR
-from numpy.fft import fft
-from scipy.sparse import diags, csr_matrix
-from scipy.sparse import hstack as sparse_hstack
-from scipy.io import loadmat
-from tqdm.auto import tqdm
+import sys
 from collections import OrderedDict
-from matplotlib import tri, rc, rcParams
 from datetime import date
+
+import numpy as np
+import pandas as pd
+import torch
+from matplotlib import rc, rcParams, tri
+from numpy.core.numeric import identity
+from scipy.io import loadmat
+from scipy.sparse import csr_matrix, diags
+from scipy.sparse import hstack as sparse_hstack
+from torch import nn
+from torch.optim.lr_scheduler import OneCycleLR, _LRScheduler
+from tqdm.auto import tqdm
+
 try:
     from libs.utils import *
 except:
     from utils import *
 
 try:
-    import plotly.figure_factory as ff
-    import plotly.io as pio
     import plotly.express as px
+    import plotly.figure_factory as ff
     import plotly.graph_objects as go
-
+    import plotly.io as pio
 except ImportError as e:
     print('Please install Plotly for showing mesh and solutions.')
 
@@ -636,6 +637,94 @@ def run_train(model, loss_func, metric_func,
             )
             save_pickle(result, os.path.join(model_save_path, result_name))
     return result
+
+
+class ProfileResult:
+    def __init__(self, result_file,
+                 num_iters=1,
+                 cuda=True) -> None:
+        '''
+        Hard-coded result computation based on torch.autograd.profiler
+        text printout, only works PyTorch 1.8.1
+        '''
+        self.columns = ['Name', 'Self CPU %', 'Self CPU',
+                        'CPU total %', 'CPU total', 'CPU time avg',
+                        'Self CUDA', 'Self CUDA %', 'CUDA total', 'CUDA time avg',
+                        'CPU Mem', 'Self CPU Mem', 'CUDA Mem', 'Self CUDA Mem',
+                        '# of Calls']
+        self.df = pd.read_csv(result_file,
+                              delim_whitespace=True,
+                              skiprows=range(5),
+                              header=None)
+        self.num_iters = num_iters
+        self.cuda = cuda
+        self._clean_df()
+
+    def _clean_df(self):
+        df = self.df
+        if self.cuda:
+            df.loc[:, 16] = df.loc[:, 16].astype(str) + df.loc[:, 17]
+            df.loc[:, 14] = df.loc[:, 14].astype(str) + df.loc[:, 15]
+        df.loc[:, 12] = df.loc[:, 12].astype(str) + df.loc[:, 13]
+        df.loc[:, 10] = df.loc[:, 10].astype(str) + df.loc[:, 11]
+        df = df.drop(columns=[11, 13, 15, 17]
+                     ) if self.cuda else df.drop(columns=[11, 13])
+        self.cpu_time_total = df.iloc[-2, 4]
+        if self.cuda:
+            self.cuda_time_total = df.iloc[-1, 4]
+        df = df[:-3].copy()
+        df.columns = self.columns
+        self.df = df
+
+    def compute_total_mem(self, col_names):
+        total_mems = []
+        for col_name in col_names:
+            total_mem = 0
+            col_vals = self.df[col_name].values
+            for val in col_vals:
+                if val[-2:] == 'Gb':
+                    total_mem += self.get_str_val(val[:-2])
+                elif val[-2:] == 'Mb':
+                    total_mem += self.get_str_val(val[:-2])/1e3
+            total_mems.append(round(total_mem, 2))
+        return total_mems
+
+    def compute_total_time(self, col_names):
+        total_times = []
+        for col_name in col_names:
+            total_time = 0
+            col_vals = self.df[col_name].values
+            for val in col_vals:
+                if val[-2:] == 'ms':
+                    total_time += float(val[:-2])
+                elif val[-2:] == 'us':
+                    total_time += float(val[:-2])/1e3
+            total_times.append(round(total_time, 2))
+        return total_times
+
+    def print_total_mem(self, col_names):
+        total_mems = self.compute_total_mem(col_names)
+        for i, col_name in enumerate(col_names):
+            print(f"{col_name} total: {total_mems[i]} GB")
+
+    def print_total(self, col_names):
+        total_times = self.compute_total_time(col_names)
+        for i, col_name in enumerate(col_names):
+            print(f"{col_name} total: {total_times[i]} ms")
+
+    def print_total_time(self):
+        print(f"# of backprop iters: {self.num_iters}")
+        print(f"CPU time total: {self.cpu_time_total}")
+        if self.cuda:
+            print(f"CUDA time total: {self.cuda_time_total}")
+
+    @staticmethod
+    def get_str_val(string):
+        if string[0] == '-':
+            return -float(string[1:])
+        else:
+            return float(string)
+
 
 if __name__ == '__main__':
     get_seed(42)

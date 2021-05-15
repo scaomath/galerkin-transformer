@@ -463,7 +463,7 @@ class DarcyDataset(Dataset):
         self.n_grid_fine = 421  # finest resolution along x-, y- dim
         self.subsample_attn = subsample_attn  # subsampling for attn
         self.subsample_nodes = subsample_nodes  # subsampling for input and output
-        self.subsample_inverse = subsample_inverse # subsample for inverse output
+        self.subsample_inverse = subsample_inverse  # subsample for inverse output
         self.subsample_method = subsample_method  # 'interp' or 'nearest'
         self.subsample_method_inverse = subsample_method_inverse  # 'interp' or 'average'
         # sampling resolution for nodes subsampling along x-, y-
@@ -535,16 +535,17 @@ class DarcyDataset(Dataset):
             nodes, targets = targets, nodes
             if self.subsample_inverse > 1:
                 n_grid = int(((self.n_grid_fine - 1)/self.subsample_nodes) + 1)
-                n_grid_inv = int(((self.n_grid_fine - 1)/self.subsample_inverse) + 1)
+                n_grid_inv = int(
+                    ((self.n_grid_fine - 1)/self.subsample_inverse) + 1)
                 pos_inv = self.get_grid(n_grid_inv,
-                                    return_elem=False,
-                                    return_boundary=self.return_boundary)
+                                        return_elem=False,
+                                        return_boundary=self.return_boundary)
                 if self.subsample_method_inverse == 'average':
                     s_inv = self.subsample_inverse//self.subsample_nodes
                     targets = pooling_2d(targets.squeeze(),
-                                        kernel_size=(s_inv, s_inv), padding=True)
+                                         kernel_size=(s_inv, s_inv), padding=True)
                 elif self.subsample_method_inverse == 'interp':
-                    targets = self.get_interp2d(targets.squeeze(), 
+                    targets = self.get_interp2d(targets.squeeze(),
                                                 n_grid,
                                                 n_grid_inv)
                 self.pos_fine = pos_inv
@@ -562,7 +563,7 @@ class DarcyDataset(Dataset):
                     x=targets[:, 1:-1, 1:-1, :])
         elif self.normalization:
             nodes = self.normalizer_x.transform(nodes)
-        
+
         if self.noise > 0:
             nodes += self.noise*np.random.randn(*nodes.shape)
 
@@ -596,18 +597,7 @@ class DarcyDataset(Dataset):
         s = self.subsample_nodes
         n = int(((n_grid_fine - 1)/s) + 1)
 
-        if s > 1 and self.subsample_method == 'nearest':
-            nodes = a[:, ::s, ::s].reshape(batch_size, n, n, 1)
-        elif s > 1 and self.subsample_method in ['interp', 'linear', 'average']:
-            nodes = pooling_2d(a,
-                               kernel_size=(s, s),
-                               padding=True).reshape(batch_size, n, n, 1)
-        else:
-            nodes = a.reshape(batch_size, n, n, 1)
-
         targets = u  # (N, 421, 421)
-        targets = targets[:, ::s, ::s].reshape(batch_size, n, n, 1)
-
         if not self.inverse_problem:
             targets_gradx, targets_grady = self.central_diff(
                 targets, self.h)  # (N, n_f, n_f)
@@ -622,6 +612,17 @@ class DarcyDataset(Dataset):
                 [targets_gradx, targets_grady], axis=-1)  # (N, n, n, 2)
         else:
             targets_grad = np.zeros((batch_size, 1, 1, 2))
+
+        targets = targets[:, ::s, ::s].reshape(batch_size, n, n, 1)
+
+        if s > 1 and self.subsample_method == 'nearest':
+            nodes = a[:, ::s, ::s].reshape(batch_size, n, n, 1)
+        elif s > 1 and self.subsample_method in ['interp', 'linear', 'average']:
+            nodes = pooling_2d(a,
+                               kernel_size=(s, s),
+                               padding=True).reshape(batch_size, n, n, 1)
+        else:
+            nodes = a.reshape(batch_size, n, n, 1)
 
         return nodes, targets, targets_grad
 
@@ -720,7 +721,7 @@ class DarcyDataset(Dataset):
             x_interp.append(xi_interp(x_c, y_c))
         return np.stack(x_interp, axis=0)
 
-    def get_edge(self, a):  
+    def get_edge(self, a):
         '''
         Modified from Long Chen's iFEM routine in 2D
         https://github.com/lyc102/ifem
@@ -820,11 +821,11 @@ class DarcyDataset(Dataset):
             edge_features = torch.tensor([1.0])
             mass_features = torch.tensor([1.0])
         if self.subsample_attn < 5:
-            pos = torch.tensor([1.0]) 
+            pos = torch.tensor([1.0])
         else:
-            pos = torch.from_numpy(pos)  
+            pos = torch.from_numpy(pos)
 
-        grid = torch.from_numpy(self.pos_fine)  
+        grid = torch.from_numpy(self.pos_fine)
         node_features = torch.from_numpy(self.node_features[index])
         coeff = torch.from_numpy(self.coeff[index])
         target = torch.from_numpy(self.target[index])
@@ -838,6 +839,7 @@ class DarcyDataset(Dataset):
                     mass=mass_features.float(),
                     target=target.float(),
                     target_grad=target_grad.float())
+
 
 class WeightedL2Loss(_WeightedLoss):
     def __init__(self,
@@ -1031,8 +1033,8 @@ class WeightedL2Loss2d(_WeightedLoss):
                 "Not implemented: dim > 2 not implemented")
 
         # m, n = u.size(1), u.size(2)
-        grad_x = (u[:, d:, s:-s] - u[:, :-d, s:-s])/d   
-        grad_y = (u[:, s:-s, d:] - u[:, s:-s, :-d])/d   
+        grad_x = (u[:, d:, s:-s] - u[:, :-d, s:-s])/d
+        grad_y = (u[:, s:-s, d:] - u[:, s:-s, :-d])/d
         grad = torch.stack([grad_x, grad_y], dim=-1)
         return grad/h
 
@@ -1054,7 +1056,8 @@ class WeightedL2Loss2d(_WeightedLoss):
         d = self.dim
         K = torch.tensor(1) if K is None else K  # (N, n, n) or just a constant
         if self.noise > 0:
-            targets = WeightedL2Loss2d._noise(targets, targets.size(-1), self.noise)
+            targets = WeightedL2Loss2d._noise(
+                targets, targets.size(-1), self.noise)
 
         target_norm = targets.pow(2).mean(dim=(1, 2)) + self.eps
 
@@ -1103,19 +1106,20 @@ class WeightedL2Loss2d(_WeightedLoss):
 
         return loss, regularizer, metric, norms
 
+
 if __name__ == '__main__':
     subsample = 32
     batch_size = 32
     data_path = os.path.join(DATA_PATH, 'burgers_data_R10.mat')
 
     train_dataset = BurgersDataset(subsample=subsample,
-                                    train_data=True,
-                                    return_edge=False,
-                                    train_portion=0.1,
-                                    data_path=data_path,
-                                    random_state=1127802)
+                                   train_data=True,
+                                   return_edge=False,
+                                   train_portion=0.1,
+                                   data_path=data_path,
+                                   random_state=1127802)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True,
-                            pin_memory=True)
+                              pin_memory=True)
     train_len = len(train_loader)
     print(f"train samples: {len(train_dataset)}")
     sample = next(iter(train_loader))

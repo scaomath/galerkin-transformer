@@ -132,3 +132,4 @@ dmypy.json
 *.mat
 *.pt
 .vscode/ltex.dictionary.en-US.txt
+*.txt

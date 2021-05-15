@@ -30,7 +30,7 @@ def main():
     n_grid = int(((421 - 1)/args.subsample_nodes) + 1)
     n_grid_c = int(((421 - 1)/args.subsample_attn) + 1)
     downsample, upsample = DarcyDataset.get_scaler_sizes(n_grid, n_grid_c)
-
+    downsample = [round(x, 2) for x in downsample]
     current_path = os.path.dirname(os.path.abspath(__file__))
     with open(os.path.join(current_path, r'config.yml')) as f:
         config = yaml.full_load(f)

@@ -105,7 +105,6 @@ def get_data(train_len=1024,
 
 def main():
 
-    # Training settings
     parser = argparse.ArgumentParser(
         description='Example 2: Darcy interface flow')
     parser.add_argument('--subsample-nodes', type=int, default=3, metavar='subsample',
