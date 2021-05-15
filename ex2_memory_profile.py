@@ -11,6 +11,9 @@ def main():
         description='Memory profiling of various transformers for Example 2')
     parser.add_argument('--batch-size', type=int, default=4, metavar='N',
                         help='input batch size for profiling (default: 4)')
+    parser.add_argument('--attn-type', nargs='+', metavar='attn_type', 
+                        help='input the attention type for encoders to profile (possile: fourier (alias integral, local), galerkin (alias global), softmax (official PyTorch implementation), linear (standard Q(K^TV) with softmax))',
+                        required=True)
     parser.add_argument('--subsample-nodes', type=int, default=3, metavar='subsample',
                         help='input fine grid sampling from 421x421 (default: 3 i.e., 141x141 grid)')
     parser.add_argument('--subsample-attn', type=int, default=10, metavar='subsample_attn',
@@ -40,8 +43,9 @@ def main():
     config['n_hidden'] = args.dmodel
     config['downscaler_size'] = downsample
     config['upscaler_size'] = upsample
+    attn_types = args.attn_type
 
-    for attn_type in ['softmax', 'fourier', 'linear', 'galerkin', ]:
+    for attn_type in attn_types:
         config['attention_type'] = attn_type
         torch.cuda.empty_cache()
         model = FourierTransformer2D(**config)
@@ -62,11 +66,16 @@ def main():
                 loss.backward()
 
         sort_by = "self_cuda_memory_usage" if cuda else "self_cpu_memory_usage"
-        print(pf.key_averages().table(sort_by=sort_by,
-                                      row_limit=300,
-                                      header=str(model.__name__) +
-                                      ' profiling results',
-                                      ))
+        file_name = os.path.join(HOME, f'ex2_{attn_type}.txt')
+        with open(file_name, 'w') as f:
+            print(pf.key_averages().table(sort_by=sort_by,
+                                        row_limit=300,
+                                        header=str(model.__name__) +
+                                        ' profiling results',
+                                        ), file=f)
+        pf_result = ProfileResult(file_name, num_iters=args.num_iter, cuda=cuda)
+        pf_result.print_total_mem(['Self CUDA Mem'])
+        pf_result.print_total_time()
 
 
 if __name__ == '__main__':
