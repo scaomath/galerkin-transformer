@@ -371,6 +371,7 @@ class PointwiseRegressor(nn.Module):
                  spacial_dim=1,
                  dropout=0.1,
                  activation='silu',
+                 return_latent=False,
                  debug=False):
         super(PointwiseRegressor, self).__init__()
         '''
@@ -394,6 +395,7 @@ class PointwiseRegressor(nn.Module):
             ))
         self.dropout = nn.Dropout(dropout)
         self.out = nn.Linear(n_hidden, out_dim)
+        self.return_latent = return_latent
         self.debug = debug
 
     def forward(self, x, grid=None):
@@ -414,7 +416,11 @@ class PointwiseRegressor(nn.Module):
             x = self.dropout(x)
 
         x = self.out(x)
-        return x
+
+        if self.return_latent:
+            return x, None
+        else:
+            return x
 
 
 class SpectralRegressor(nn.Module):
@@ -866,9 +872,13 @@ class FourierTransformer2D(nn.Module):
 
         x = x.view(bsz, n_s, n_s, self.n_hidden)
         x = self.upscaler(x)
-
         x = self.dropout(x)
-        x = self.regressor(x, grid=grid)
+
+        if self.return_latent:
+            x, xr_latent = self.regressor(x, grid=grid)
+            x_latent.append(xr_latent)
+        else:
+            x = self.regressor(x, grid=grid)
         if self.normalizer:
             x = self.normalizer.inverse_transform(x)
 
@@ -1017,6 +1027,7 @@ class FourierTransformer2D(nn.Module):
                                                 spacial_dim=self.spacial_dim,
                                                 activation=self.regressor_activation,
                                                 dropout=self.decoder_dropout,
+                                                return_latent=self.return_latent,
                                                 debug=self.debug)
         elif self.decoder_type == 'ifft2':
             self.regressor = SpectralRegressor(in_dim=self.n_hidden,
@@ -1030,6 +1041,7 @@ class FourierTransformer2D(nn.Module):
                                                activation=self.regressor_activation,
                                                last_activation=self.last_activation,
                                                dropout=self.decoder_dropout,
+                                               return_latent=self.return_latent,
                                                debug=self.debug
                                                )
         else:
