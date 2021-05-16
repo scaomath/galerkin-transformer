@@ -14,17 +14,17 @@ pip install -r requirements.txt
 ```
 
 # Data
-The data is courtesy of [Mr. Zongyi Li (Caltech)](https://github.com/zongyi-li): https://github.com/zongyi-li/fourier_neural_operator under the MIT license.
+The data is courtesy of [Mr. Zongyi Li (Caltech)](https://github.com/zongyi-li/fourier_neural_operator)  under the MIT license.
 
 # Examples
-All examples are learning PDE-related operators. The setting can be found in [`config.yml`](./config.yml). By default the evaluation is performed on the last 100 samples in the test dataset. All trainers are using the `1cycle` scheduler for 100 epochs.
+All examples are learning PDE-related operators. The setting can be found in [`config.yml`](./config.yml). By default the evaluation is performed on the last 100 samples in the test dataset. All trainers are using the [`1cycle` scheduler](https://arxiv.org/abs/1708.07120) in [PyTorch](https://pytorch.org/docs/master/generated/torch.optim.lr_scheduler.OneCycleLR.html) for 100 epochs. Every example has a `--seed {$SEED}` argument and the default seed is 1127802.
 
 ## Example 1: Burgers equation
 The baseline benchmark [`ex1_burgers.py`](./ex1_burgers.py): evaluation relative error is about `1e-3` with a simple pointwise forward expansion feature extractor. The input is the initial condition of a viscous Burgers' equation on a discrete grid, the output is an approximation to the solution marched to time $1$. The initial data are generating using a GRF and the data in the validation set are not in the train set.
 
 Default benchmark on a 2048 grid using a Fourier Transformer, with 4 Fourier-type attention layers as the encoder and 2 spectral convolution layers from [Li et al 2020](https://github.com/zongyi-li/fourier_neural_operator) as the decoder:
 ```bash
-python ex1_burgers.py --seed 1127802
+python ex1_burgers.py
 ```
 No subsampling (8192 grid), Galerkin-type attention, adding a diagonal matrix to the Xavier initializations of the `W^Q, W^K, W^V` matrices (about 30% better than those without).
 ```bash
