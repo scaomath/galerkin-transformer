@@ -548,6 +548,8 @@ class DarcyDataset(Dataset):
                     targets = self.get_interp2d(targets.squeeze(),
                                                 n_grid,
                                                 n_grid_inv)
+                elif self.subsample_method_inverse is None:
+                    targets = targets.squeeze()
                 self.pos_fine = pos_inv
                 targets = targets[..., None]
 

@@ -23,7 +23,7 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 HOME = os.path.dirname(current_path)
 sys.path.append(HOME)
 
-ADDITIONAL_ATTR = ['normalizer', 'raw_laplacian', 'return_ortho',
+ADDITIONAL_ATTR = ['normalizer', 'raw_laplacian', 'return_latent',
                    'residual_type', 'norm_type', 'boundary_condition',
                    'upscaler_size', 'downscaler_size',
                    'regressor_activation', 'attn_activation',
@@ -648,14 +648,14 @@ class FourierTransformer(nn.Module):
         - weight: (N, seq_len, seq_len): mass matrix prefered
             or (N, seq_len) when mass matrices are not provided
         '''
-        x_ortho = []
+        x_latent = []
         attn_weights = []
 
         x = self.feat_extract(node, edge)
 
-        if self.spacial_residual or self.return_ortho:
+        if self.spacial_residual or self.return_latent:
             res = x.contiguous()
-            x_ortho.append(res)
+            x_latent.append(res)
 
         for encoder in self.encoder_layers:
             if self.return_attn_weight:
@@ -664,8 +664,8 @@ class FourierTransformer(nn.Module):
             else:
                 x = encoder(x, pos, weight)
 
-            if self.return_ortho:
-                x_ortho.append(x.contiguous())
+            if self.return_latent:
+                x_latent.append(x.contiguous())
 
         if self.spacial_residual:
             x = res + x
@@ -678,7 +678,7 @@ class FourierTransformer(nn.Module):
 
         return dict(preds=x,
                     preds_freq=x_freq,
-                    preds_ortho=x_ortho,
+                    preds_ortho=x_latent,
                     attn_weights=attn_weights)
 
     def _initialize(self):
@@ -834,7 +834,7 @@ class FourierTransformer2D(nn.Module):
         '''
         bsz = node.size(0)
         n_s = int(pos.size(1)**(0.5))
-        x_ortho = []
+        x_latent = []
         attn_weights = []
 
         if not self.downscaler_size:
@@ -852,8 +852,8 @@ class FourierTransformer2D(nn.Module):
                 attn_weights.append(attn_weight)
             else:
                 x = encoder(x, pos, weight)
-            if self.return_ortho:
-                x_ortho.append(x.contiguous())
+            if self.return_latent:
+                x_latent.append(x.contiguous())
 
         x = x.view(bsz, n_s, n_s, self.n_hidden)
         x = self.upscaler(x)
@@ -869,7 +869,7 @@ class FourierTransformer2D(nn.Module):
             x = F.pad(x, (0, 0, 1, 1, 1, 1), "constant", 0)
 
         return dict(preds=x,
-                    preds_ortho=x_ortho,
+                    preds_ortho=x_latent,
                     attn_weights=attn_weights)
 
     def _initialize(self):

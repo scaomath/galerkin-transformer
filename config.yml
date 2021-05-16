@@ -22,7 +22,7 @@ ex1_burgers:
   batch_norm: False
   spacial_residual: False
   return_attn_weight: False
-  return_ortho: False
+  return_latent: False
   residual_type: plus
   seq_len: null
   bulk_regression: False
@@ -57,7 +57,7 @@ ex2_darcy:
   attn_norm: True
   batch_norm: False
   return_attn_weight: False
-  return_ortho: False
+  return_latent: False
   decoder_type: ifft2
   spacial_dim: 2
   spacial_fc: True
@@ -98,7 +98,7 @@ ex3_darcy_inv:
   attn_norm: False
   batch_norm: False
   return_attn_weight: False
-  return_ortho: False
+  return_latent: False
   decoder_type: pointwise
   spacial_dim: 2
   spacial_fc: True
