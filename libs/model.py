@@ -44,7 +44,7 @@ class FourierTransformerEncoderLayer(nn.Module):
                  norm_type='layer',
                  batch_norm=False,
                  attn_weight=False,
-                 xavier_init: float=1e-2,
+                 xavier_init: float = 1e-2,
                  diagonal_weight: float = 1e-2,
                  symmetric_init=False,
                  residual_type='add',
@@ -877,6 +877,21 @@ class FourierTransformer2D(nn.Module):
         self._get_scaler()
         self._get_encoder()
         self._get_regressor()
+
+    def cuda(self, device=None):
+        self = super().cuda(device)
+        self.normalizer = self.normalizer.cuda(device)
+        return self
+
+    def cpu(self):
+        self = super().cpu()
+        self.normalizer = self.normalizer.cpu()
+        return self
+
+    def to(self, *args, **kwargs):
+        self = super().to(*args, **kwargs)
+        self.normalizer = self.normalizer.to(*args, **kwargs)
+        return self
 
     @staticmethod
     def _initialize_layer(layer, gain=1e-2):

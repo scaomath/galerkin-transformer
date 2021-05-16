@@ -383,13 +383,13 @@ class BurgersDataset(Dataset):
                     mass=mass.float(),
                     target=target.float(),)
 
-
 class UnitGaussianNormalizer:
     def __init__(self, eps=1e-8):
         super(UnitGaussianNormalizer, self).__init__()
         '''
         modified from utils3.py in 
         https://github.com/zongyi-li/fourier_neural_operator
+        Changes:
             - .to() has a return to polymorph the torch behavior
             - naming convention changed to sklearn scalers 
         '''
@@ -414,6 +414,18 @@ class UnitGaussianNormalizer:
         else:
             self.mean = torch.from_numpy(self.mean).float().to(device)
             self.std = torch.from_numpy(self.std).float().to(device)
+        return self
+
+    def cuda(self, device=None):
+        assert torch.is_tensor(self.mean)
+        self.mean = self.mean.float().cuda(device)
+        self.std = self.std.float().cuda(device)
+        return self
+
+    def cpu(self):
+        assert torch.is_tensor(self.mean)
+        self.mean = self.mean.float().cpu()
+        self.std = self.std.float().cpu()
         return self
 
 
