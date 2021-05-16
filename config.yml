@@ -43,11 +43,11 @@ ex2_darcy:
   node_feats: 1
   pos_dim: 2
   n_targets: 1
-  n_hidden: 64
+  n_hidden: 128
   num_feat_layers: 0
-  num_ft_layers: 10
-  n_head: 1
-  dim_feedforward: 128
+  num_ft_layers: 6
+  n_head: 4
+  dim_feedforward: 256
   feat_extract_type: null
   attention_type: galerkin
   xavier_init: 0.01

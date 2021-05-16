@@ -859,13 +859,12 @@ class FourierTransformer2D(nn.Module):
         x = self.upscaler(x)
 
         x = self.dropout(x)
-        if x.size(1) != grid.size(1):
-            x = x[:, 1:-1, 1:-1].contiguous()
         x = self.regressor(x, grid=grid)
         if self.normalizer:
             x = self.normalizer.inverse_transform(x)
 
         if self.boundary_condition == 'dirichlet' or self.boundary_condition is None:
+            x = x[:, 1:-1, 1:-1].contiguous()
             x = F.pad(x, (0, 0, 1, 1, 1, 1), "constant", 0)
 
         return dict(preds=x,
@@ -1012,7 +1011,7 @@ class FourierTransformer2D(nn.Module):
                                                 debug=self.debug)
         elif self.decoder_type == 'ifft2':
             self.regressor = SpectralRegressor(in_dim=self.n_hidden,
-                                               n_hidden=self.n_hidden,
+                                               n_hidden=self.freq_dim,
                                                freq_dim=self.freq_dim,
                                                out_dim=self.n_targets,
                                                num_spectral_layers=self.num_regressor_layers,

@@ -450,7 +450,7 @@ class DarcyDataset(Dataset):
                  sparse_edge=False,
                  return_edge=False,
                  return_lap_only=True,
-                 return_boundary=False,
+                 return_boundary=True,
                  noise=0,
                  random_state=1127802):
         '''
