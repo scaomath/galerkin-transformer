@@ -23,7 +23,7 @@ def train_batch_darcy(model, loss_func, data, optimizer, lr_scheduler, device, g
     if isinstance(out_, dict):
         out = out_['preds']
     elif isinstance(out_, tuple):
-        out = out_[-1]
+        out = out_[0]
 
     if out.ndim == 4:
         u_pred, pred_grad, target = out[..., 0], out[..., 1:], u[..., 0]
@@ -56,7 +56,7 @@ def validate_epoch_darcy(model, metric_func, valid_loader, device):
             if isinstance(out_, dict):
                 out = out_['preds']
             elif isinstance(out_, tuple):
-                out = out_[-1]
+                out = out_[0]
             u_pred = out[..., 0]
             target = data["target"].to(device)
             u = target[..., 0]
@@ -105,7 +105,6 @@ def get_data(train_len=1024,
 
 
 def main():
-
     parser = argparse.ArgumentParser(
         description='Example 2: Darcy interface flow')
     parser.add_argument('--subsample-nodes', type=int, default=3, metavar='subsample',

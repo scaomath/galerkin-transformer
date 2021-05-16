@@ -2,7 +2,7 @@
 ex1_burgers:
   lambda: null
   node_feats: 1
-  edge_feats: 1
+  edge_feats: null
   pos_dim: 1
   n_targets: 1
   n_hidden: 96

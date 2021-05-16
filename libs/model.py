@@ -429,6 +429,7 @@ class SpectralRegressor(nn.Module):
                  spacial_fc=False,
                  spacial_dim=2,
                  return_freq=False,
+                 return_latent=False,
                  normalizer=None,
                  activation='silu',
                  last_activation=True,
@@ -488,6 +489,7 @@ class SpectralRegressor(nn.Module):
         )
         self.normalizer = normalizer
         self.return_freq = return_freq
+        self.return_latent = return_latent
         self.debug = debug
 
     def forward(self, x, edge=None, pos=None, grid=None):
@@ -499,23 +501,30 @@ class SpectralRegressor(nn.Module):
             Input: (-1, n, in_features)
             Output: (-1, n, n_targets)
         '''
+        x_latent = []
+        x_fts = []
+
         if self.spacial_fc:
             x = torch.cat([x, grid], dim=-1)
             x = self.fc(x)
 
         for layer in self.spectral_conv:
             if self.return_freq:
-                x_ft, x = layer(x)
+                x, x_ft = layer(x)
+                x_fts.append(x_ft.contiguous())
             else:
                 x = layer(x)
+
+            if self.return_latent:
+                x_latent.append(x.contiguous())
 
         x = self.regressor(x)
 
         if self.normalizer:
             x = self.normalizer.inverse_transform(x)
 
-        if self.return_freq:
-            return x_ft, x
+        if self.return_freq or self.return_latent:
+            return x, dict(preds_freq=x_fts, preds_latent=x_latent)
         else:
             return x
 

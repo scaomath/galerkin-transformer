@@ -896,7 +896,7 @@ class SpectralConv1d(nn.Module):
         x = self.activation(x + res)
 
         if self.return_freq:
-            return out_ft, x
+            return x, out_ft
         else:
             return x
 
@@ -988,6 +988,6 @@ class SpectralConv2d(nn.Module):
             x = x.view(batch_size, n**2, out_dim)
 
         if self.return_freq:
-            return out_ft, x
+            return x, out_ft
         else:
             return x
