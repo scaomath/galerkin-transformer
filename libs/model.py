@@ -678,7 +678,7 @@ class FourierTransformer(nn.Module):
 
         return dict(preds=x,
                     preds_freq=x_freq,
-                    preds_ortho=x_latent,
+                    preds_latent=x_latent,
                     attn_weights=attn_weights)
 
     def _initialize(self):
@@ -869,7 +869,7 @@ class FourierTransformer2D(nn.Module):
             x = F.pad(x, (0, 0, 1, 1, 1, 1), "constant", 0)
 
         return dict(preds=x,
-                    preds_ortho=x_latent,
+                    preds_latent=x_latent,
                     attn_weights=attn_weights)
 
     def _initialize(self):

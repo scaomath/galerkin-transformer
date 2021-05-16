@@ -45,10 +45,10 @@ def train_batch_burgers(model, loss_func, data, optimizer, lr_scheduler, device,
 
     if isinstance(out_, dict):
         out = out_['preds']
-        y_ortho = out_['preds_ortho']
+        y_latent = out_['preds_latent']
     elif isinstance(out_, tuple):
         out = out_[-1]
-        y_ortho = None
+        y_latent = None
 
     target = data["target"].to(device)
     u, up = target[..., 0], target[..., 1]  # the targets are the first two
@@ -56,11 +56,11 @@ def train_batch_burgers(model, loss_func, data, optimizer, lr_scheduler, device,
     if out.size(2) == 2:
         u_pred, up_pred = out[..., 0], out[..., 1]
         loss, reg, ortho, _ = loss_func(
-            u_pred, u, up_pred, up, preds_ortho=y_ortho)
+            u_pred, u, up_pred, up, preds_latent=y_latent)
     elif out.size(2) == 1:
         u_pred = out[..., 0]
         loss, reg, ortho, _ = loss_func(
-            u_pred, u, targets_prime=up, preds_ortho=y_ortho)
+            u_pred, u, targets_prime=up, preds_latent=y_latent)
     loss = loss + reg + ortho
     loss.backward()
     nn.utils.clip_grad_norm_(model.parameters(), grad_clip)

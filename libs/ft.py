@@ -895,7 +895,7 @@ class WeightedL2Loss(_WeightedLoss):
 
     def forward(self, preds, targets,
                 preds_prime=None, targets_prime=None,
-                preds_ortho: list = [], K=None):
+                preds_latent: list = [], K=None):
         r'''
         all inputs are assumed to have shape (N, L)
         grad has shape (N, L) in 1d, and (N, L, 2) in 2D
@@ -904,7 +904,7 @@ class WeightedL2Loss(_WeightedLoss):
         weights has the same shape with preds on nonuniform mesh
         the norm and the error norm all uses mean instead of sum to cancel out the factor
         on uniform mesh, h can be set to 1
-        preds_ortho: (N, L, E)
+        preds_latent: (N, L, E)
         '''
         batch_size = targets.size(0)
 
@@ -950,9 +950,9 @@ class WeightedL2Loss(_WeightedLoss):
                 [0.0], requires_grad=True, device=preds.device)
 
         # TODO: adding this regularizer on orthogonality
-        if self.orthogonal_reg > 0 and preds_ortho:
+        if self.orthogonal_reg > 0 and preds_latent:
             ortho = []
-            for pred_ortho in preds_ortho:
+            for pred_ortho in preds_latent:
                 if self.orthogonal_mode in ['local', 'fourier']:
                     pred_mm = torch.matmul(
                         pred_ortho, pred_ortho.transpose(-2, -1))
