@@ -10,8 +10,9 @@ subsample = 4
 batch_size = 8
 val_batch_size = 4
 
-def get_data(train_portion=1024, 
-             valid_portion=100, 
+
+def get_data(train_portion=1024,
+             valid_portion=100,
              random_state=SEED,
              batch_size=batch_size,
              val_batch_size=val_batch_size,
@@ -31,11 +32,12 @@ def get_data(train_portion=1024,
                                    data_path=data_path,
                                    random_state=random_state)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, 
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                               drop_last=True, **kwargs)
-    valid_loader = DataLoader(valid_dataset, batch_size=val_batch_size, shuffle=False, 
-                              drop_last=False,**kwargs)
+    valid_loader = DataLoader(valid_dataset, batch_size=val_batch_size, shuffle=False,
+                              drop_last=False, **kwargs)
     return train_loader, valid_loader
+
 
 def train_batch_burgers(model, loss_func, data, optimizer, lr_scheduler, device, grad_clip=0.999):
     optimizer.zero_grad()
@@ -98,6 +100,7 @@ def validate_epoch_burgers(model, metric_func, valid_loader, device):
                 metric_val.append(metric)
 
     return dict(metric=np.mean(metric_val, axis=0))
+
 
 def main():
 
@@ -168,11 +171,15 @@ def main():
     config['xavier_init'] = args.xavier_init
     config['layer_norm'] = args.reg_layernorm
     config['attn_norm'] = not args.reg_layernorm
+    if config['attention_type'] in ['softmax', 'linear']:
+        config['encoder_dropout'] = 0.1
+        config['dropout'] = 0.05
 
     torch.cuda.empty_cache()
     model = FourierTransformer(**config)
     model = model.to(device)
-    print(f"\nModel: {model.__name__}\t Number of params: {get_num_params(model)}\n")
+    print(
+        f"\nModel: {model.__name__}\t Number of params: {get_num_params(model)}\n")
 
     epochs = args.epochs
     lr = args.lr
@@ -204,6 +211,7 @@ def main():
     plt.grid(True, which="both", ls="--")
     plt.legend()
     plt.show()
+
 
 if __name__ == '__main__':
     main()

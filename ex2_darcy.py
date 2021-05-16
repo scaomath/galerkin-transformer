@@ -188,6 +188,9 @@ def main():
     config['upscaler_size'] = upsample
     config['layer_norm'] = args.reg_layernorm
     config['attn_norm'] = not args.reg_layernorm
+    if config['attention_type'] in ['softmax', 'linear']:
+        config['encoder_dropout'] = 0.1
+        config['dropout'] = 0.05
 
     torch.cuda.empty_cache()
     model = FourierTransformer2D(**config)
