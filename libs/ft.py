@@ -1051,7 +1051,7 @@ class WeightedL2Loss2d(_WeightedLoss):
         weights has the same shape with preds on nonuniform mesh
         the norm and the error norm all uses mean instead of sum to cancel out the factor
         '''
-        batch_size = targets.size(0)
+        batch_size = targets.size(0) # for debug only
 
         h = self.h if weights is None else weights
         d = self.dim
@@ -1063,7 +1063,7 @@ class WeightedL2Loss2d(_WeightedLoss):
 
         if targets_prime is not None:
             targets_prime_norm = d * \
-                ((K*targets_prime).pow(2)).mean(dim=(1, 2, 3)) + self.eps
+                (K*targets_prime.pow(2)).mean(dim=(1, 2, 3)) + self.eps
         else:
             targets_prime_norm = 1
 
