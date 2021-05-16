@@ -911,8 +911,7 @@ class WeightedL2Loss(_WeightedLoss):
         h = self.h
         # K = torch.tensor(1) if K is None else K # (N, S, 1) or just a constant
         if self.noise > 0:
-            targets = WeightedL2Loss._noise(
-                targets, targets.size(-1), self.noise)
+            targets = self._noise(targets, targets.size(-1), self.noise)
 
         target_norm = h*targets.pow(2).sum(dim=1)
 
@@ -1058,14 +1057,13 @@ class WeightedL2Loss2d(_WeightedLoss):
         d = self.dim
         K = torch.tensor(1) if K is None else K  # (N, n, n) or just a constant
         if self.noise > 0:
-            targets = WeightedL2Loss2d._noise(
-                targets, targets.size(-1), self.noise)
+            targets = self._noise(targets, targets.size(-1), self.noise)
 
         target_norm = targets.pow(2).mean(dim=(1, 2)) + self.eps
 
         if targets_prime is not None:
             targets_prime_norm = d * \
-                (K*targets_prime.pow(2)).mean(dim=(1, 2, 3)) + self.eps
+                ((K*targets_prime).pow(2)).mean(dim=(1, 2, 3)) + self.eps
         else:
             targets_prime_norm = 1
 
@@ -1073,7 +1071,7 @@ class WeightedL2Loss2d(_WeightedLoss):
                           ).mean(dim=(1, 2))/target_norm
 
         if preds_prime is not None and self.alpha > 0:
-            grad_diff = (preds_prime - K*targets_prime).pow(2)
+            grad_diff = (K*(preds_prime - targets_prime)).pow(2)
             loss_prime = self.alpha * \
                 grad_diff.mean(dim=(1, 2, 3))/targets_prime_norm
             loss += loss_prime
@@ -1095,7 +1093,7 @@ class WeightedL2Loss2d(_WeightedLoss):
             if K.ndim > 1:
                 K = K[:, s:-s, s:-s].contiguous()
 
-            regularizer = self.gamma * h * (K * (targets_prime - preds_diff)
+            regularizer = self.gamma * h * ((K * (targets_prime - preds_diff))
                                             .pow(2)).mean(dim=(1, 2, 3))/targets_prime_norm
 
             regularizer = regularizer.sqrt().mean() if self.return_norm else regularizer.mean()

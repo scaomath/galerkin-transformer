@@ -32,9 +32,11 @@ python ex1_burgers.py --subsample 1\
                       --attn-type 'galerkin'\
                       --xavier-init 0.01 --diag-weight 0.01
 ```
-Use the conventional layer normalization in attention layers:
-```python
-python ex1_burgers.py --reg-layernorm
+Using standard softmax normalization `Softmax(QK^T/sqrt{d})V`, conventional layer normalization application scheme in attention layers
+```bash
+python ex1_burgers.py --attn-type 'softmax'\
+                      --reg-layernorm\
+                      --xavier-init 1.0 --diag-weight 0.0
 ```
 
 ## Example 2: Interface Darcy flow
@@ -67,7 +69,7 @@ python ex3_darcy_inv.py --subsample-attn 12\
 ```
 
 # Memory and speed profiling using `autograd.profiler`
-Using CUDA, Fourier Transformer features an over 40% reduction in `self_cuda_memory_usage` versus the standard softmax normalized transformers, and Galerkin Transformer doubles the backpropagation speed versus the standard linearized transformers. If no GPU is available please enable the `--no-cuda` switch.
+Using CUDA, Fourier Transformer features an over 40% reduction in `self_cuda_memory_usage` versus the standard softmax normalized transformers, and Galerkin Transformer's the backpropagation speed has a 20% to 100% increase over the standard linearized transformers. If no GPU is available please enable the `--no-cuda` switch.
 
 Example 1 memory profile of a model with 96 hidden dimension with an input sequence length 8192. Compare the memory usage of the Fourier transformer with the one with softmax
 ```bash
