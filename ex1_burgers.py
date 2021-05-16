@@ -103,8 +103,6 @@ def validate_epoch_burgers(model, metric_func, valid_loader, device):
 
 
 def main():
-
-    # Training settings
     parser = argparse.ArgumentParser(description='Example 1: Burgers equation')
     parser.add_argument('--subsample', type=int, default=4, metavar='subsample',
                         help='input sampling from 8192 (default: 4 i.e., 2048 grid)')
@@ -178,8 +176,16 @@ def main():
     torch.cuda.empty_cache()
     model = FourierTransformer(**config)
     model = model.to(device)
-    print(
-        f"\nModel: {model.__name__}\t Number of params: {get_num_params(model)}\n")
+    print(f"\nModel: {model.__name__}\t Number of params: {get_num_params(model)}")
+
+    model_name, result_name = get_model_name(model='burgers',
+                                         num_ft_layers=config['num_ft_layers'],
+                                         n_hidden=config['n_hidden'],
+                                         attention_type=config['attention_type'],
+                                         layer_norm=config['layer_norm'],
+                                         grid_size=int(2**13//args.subsample),
+                                         )
+    print(f"Saving model and result in {MODEL_PATH}/{model_name}\n")
 
     epochs = args.epochs
     lr = args.lr
@@ -200,7 +206,8 @@ def main():
                        epochs=epochs,
                        patience=None,
                        tqdm_mode='epoch',
-                       mode='min',
+                       model_name=model_name,
+                       result_name=result_name,
                        device=device)
 
     plt.figure(1)

@@ -68,6 +68,7 @@ def validate_epoch_darcy(model, metric_func, valid_loader, device):
 
     return dict(metric=np.mean(metric_val, axis=0))
 
+
 def get_data(train_len=1024,
              valid_len=100,
              random_state=SEED,
@@ -111,8 +112,8 @@ def main():
                         help='input fine grid sampling from 421x421 (default: 3 i.e., 141x141 grid)')
     parser.add_argument('--subsample-attn', type=int, default=10, metavar='subsample_attn',
                         help='input coarse grid sampling from 421x421 (default: 10 i.e., 43x43 grid)')
-    parser.add_argument('--batch-size', type=int, default=8, metavar='N',
-                        help='input batch size for training (default: 8)')
+    parser.add_argument('--batch-size', type=int, default=4, metavar='N',
+                        help='input batch size for training (default: 4)')
     parser.add_argument('--val-batch-size', type=int, default=4, metavar='N',
                         help='input batch size for validation (default: 4)')
     parser.add_argument('--attn-type', type=str, default='galerkin', metavar='attn_type',
@@ -195,7 +196,19 @@ def main():
     torch.cuda.empty_cache()
     model = FourierTransformer2D(**config)
     model = model.to(device)
-    print(f"\nModel: {model.__name__}\t Number of params: {get_num_params(model)}\n")
+    print(
+        f"\nModel: {model.__name__}\t Number of params: {get_num_params(model)}")
+
+    model_name, result_name = get_model_name(model='darcy',
+                                             num_ft_layers=config['num_ft_layers'],
+                                             n_hidden=config['n_hidden'],
+                                             attention_type=config['attention_type'],
+                                             layer_norm=config['layer_norm'],
+                                             grid_size=n_grid,
+                                             inverse_problem=False,
+                                             additional_str=f'32f'
+                                             )
+    print(f"Saving model and result in {MODEL_PATH}/{model_name}\n")
 
     epochs = args.epochs
     lr = args.lr
@@ -216,6 +229,8 @@ def main():
                        epochs=epochs,
                        patience=None,
                        tqdm_mode='epoch',
+                       model_name=model_name,
+                       result_name=result_name,
                        device=device)
 
     plt.figure(1)

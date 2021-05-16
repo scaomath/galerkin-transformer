@@ -153,7 +153,19 @@ def main():
     model = FourierTransformer2D(**config)
     model = model.to(device)
     print(
-        f"\nModel: {model.__name__}\t Number of params: {get_num_params(model)}\n")
+        f"\nModel: {model.__name__}\t Number of params: {get_num_params(model)}")
+
+    n_head = config['n_head']
+    model_name, result_name = get_model_name(model='darcy',
+                                             num_ft_layers=config['num_ft_layers'],
+                                             n_hidden=config['n_hidden'],
+                                             attention_type=config['attention_type'],
+                                             layer_norm=config['layer_norm'],
+                                             grid_size=n_grid,
+                                             inverse_problem=True,
+                                             additional_str=f'{n_head}h_{args.noise:.1e}'
+                                             )
+    print(f"Saving model and result in {MODEL_PATH}/{model_name}\n")
 
     epochs = args.epochs
     lr = args.lr
@@ -174,6 +186,8 @@ def main():
                        epochs=epochs,
                        patience=None,
                        tqdm_mode='batch',
+                       model_name=model_name,
+                       result_name=result_name,
                        device=device)
 
     plt.figure(1)
