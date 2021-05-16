@@ -952,20 +952,20 @@ class WeightedL2Loss(_WeightedLoss):
         # TODO: adding this regularizer on orthogonality
         if self.orthogonal_reg > 0 and preds_latent:
             ortho = []
-            for pred_ortho in preds_latent:
+            for y_lat in preds_latent:
                 if self.orthogonal_mode in ['local', 'fourier']:
                     pred_mm = torch.matmul(
-                        pred_ortho, pred_ortho.transpose(-2, -1))
+                        y_lat, y_lat.transpose(-2, -1))
                 elif self.orthogonal_mode in ['global', 'galerkin', 'linear']:
                     pred_mm = torch.matmul(
-                        pred_ortho.transpose(-2, -1), pred_ortho)
+                        y_lat.transpose(-2, -1), y_lat)
 
                 with torch.no_grad():
                     mat_dim = pred_mm.size(-1)
                     if self.orthogonal_mode in ['local', 'fourier']:
-                        tr = (pred_ortho**2).sum(dim=-1)
+                        tr = (y_lat**2).sum(dim=-1)
                     elif self.orthogonal_mode in ['global', 'galerkin', 'linear']:
-                        tr = (pred_ortho**2).sum(dim=-2)
+                        tr = (y_lat**2).sum(dim=-2)
                     assert tr.size(-1) == mat_dim
                     diag = [torch.diag(tr[i, :]) for i in range(batch_size)]
                     diag = torch.stack(diag, dim=0)
