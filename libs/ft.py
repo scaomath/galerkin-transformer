@@ -739,7 +739,6 @@ class DarcyDataset(Dataset):
         '''
         Modified from Long Chen's iFEM routine in 2D
         https://github.com/lyc102/ifem
-        Python port: https://github.com/scaomath/python-ifem
         a: diffusion constant for all, not downsampled
         (x,y), elements downsampled if applicable
         '''

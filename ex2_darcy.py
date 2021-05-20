@@ -188,9 +188,9 @@ def main():
     config['upscaler_size'] = upsample
     config['layer_norm'] = args.reg_layernorm
     config['attn_norm'] = not args.reg_layernorm
-    if config['attention_type'] in ['softmax', 'linear']:
-        config['encoder_dropout'] = 0.1
-        config['dropout'] = 0.05
+    # if config['attention_type'] in ['softmax', 'linear']:
+    #     config['encoder_dropout'] = 0.1
+    #     config['dropout'] = 0.05
 
     torch.cuda.empty_cache()
     model = FourierTransformer2D(**config)
@@ -210,7 +210,10 @@ def main():
     print(f"Saving model and result in {MODEL_PATH}/{model_name}\n")
 
     epochs = args.epochs
-    lr = args.lr
+    if config['attention_type'] in ['fourier', 'softmax']:
+        lr = min(args.lr, 5e-4)
+    else:
+        lr = args.lr
     h = (1/421)*args.subsample_nodes
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = OneCycleLR(optimizer, max_lr=lr, div_factor=1e4, final_div_factor=1e4,
