@@ -622,7 +622,7 @@ class SimpleAttention(nn.Module):
                  attention_type='fourier',
                  dropout=0.1,
                  xavier_init=1e-2,
-                 diagonal_weight=1e-1,
+                 diagonal_weight=1e-2,
                  symmetric_init=False,
                  norm=False,
                  norm_type='layer',
@@ -649,14 +649,14 @@ class SimpleAttention(nn.Module):
                         [copy.deepcopy(nn.InstanceNorm1d(self.d_k)) for _ in range(n_head)])
                 elif norm_type == 'layer':
                     self.norm_K = nn.ModuleList(
-                        [copy.deepcopy(nn.LayerNorm(self.d_k, eps=1e-7)) for _ in range(n_head)])
+                        [copy.deepcopy(nn.LayerNorm(self.d_k)) for _ in range(n_head)])
                     self.norm_V = nn.ModuleList(
-                        [copy.deepcopy(nn.LayerNorm(self.d_k, eps=1e-7)) for _ in range(n_head)])
+                        [copy.deepcopy(nn.LayerNorm(self.d_k)) for _ in range(n_head)])
             else:
                 self.norm_K = nn.ModuleList(
-                    [copy.deepcopy(nn.LayerNorm(self.d_k, eps=1e-7)) for _ in range(n_head)])
+                    [copy.deepcopy(nn.LayerNorm(self.d_k)) for _ in range(n_head)])
                 self.norm_Q = nn.ModuleList(
-                    [copy.deepcopy(nn.LayerNorm(self.d_k, eps=1e-7)) for _ in range(n_head)])
+                    [copy.deepcopy(nn.LayerNorm(self.d_k)) for _ in range(n_head)])
         self.add_norm = norm
         self.norm_type = norm_type
 

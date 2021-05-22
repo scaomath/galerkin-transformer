@@ -13,7 +13,6 @@ val_batch_size = 4
 
 def get_data(train_portion=1024,
              valid_portion=100,
-             random_state=SEED,
              batch_size=batch_size,
              val_batch_size=val_batch_size,
              subsample=subsample,
@@ -23,14 +22,12 @@ def get_data(train_portion=1024,
     train_dataset = BurgersDataset(subsample=subsample,
                                    train_data=True,
                                    train_portion=train_portion,
-                                   data_path=data_path,
-                                   random_state=random_state)
+                                   data_path=data_path,)
 
     valid_dataset = BurgersDataset(subsample=subsample,
                                    train_data=False,
                                    valid_portion=valid_portion,
-                                   data_path=data_path,
-                                   random_state=random_state)
+                                   data_path=data_path,)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                               drop_last=True, **kwargs)
