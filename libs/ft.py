@@ -185,16 +185,16 @@ class BurgersDataset(Dataset):
 
     def train_test_split(self, len_data):
         # TODO: change this to random split
-        if self.train_portion < 1:
+        if self.train_portion <= 1:
             train_len = int(self.train_portion*len_data)
-        elif 1 < self.train_portion < len_data:
+        elif 1 < self.train_portion <= len_data:
             train_len = self.train_portion
         else:
             train_len = int(0.8*len_data)
 
-        if self.valid_portion < 1:
+        if self.valid_portion <= 1:
             valid_len = int(self.valid_portion*len_data)
-        elif 1 < self.valid_portion < len_data:
+        elif 1 < self.valid_portion <= len_data:
             valid_len = self.valid_portion
         else:
             valid_len = int(0.1*len_data)

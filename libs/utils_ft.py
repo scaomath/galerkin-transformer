@@ -490,10 +490,130 @@ def get_model_name(model='burgers',
     if additional_str: model_name += additional_str
 
     _suffix = str(date.today())
-    result_name = model_name + '_' + _suffix + '.pkl'
-    model_name += '_' + _suffix + '.pt'
+    if model_name[-1] == '_':
+        result_name = model_name + _suffix + '.pkl'
+        model_name += _suffix + '.pt'
+    else:
+        result_name = model_name + '_' + _suffix + '.pkl'
+        model_name += '_' + _suffix + '.pt'
     return model_name, result_name
 
+def train_batch_burgers(model, loss_func, data, optimizer, lr_scheduler, device, grad_clip=0.999):
+    optimizer.zero_grad()
+    x, edge = data["node"].to(device), data["edge"].to(device)
+    pos, grid = data['pos'].to(device), data['grid'].to(device)
+    out_ = model(x, edge, pos, grid)
+
+    if isinstance(out_, dict):
+        out = out_['preds']
+        y_latent = out_['preds_latent']
+    elif isinstance(out_, tuple):
+        out = out_[0]
+        y_latent = None
+
+    target = data["target"].to(device)
+    u, up = target[..., 0], target[..., 1]
+
+    if out.size(2) == 2:
+        u_pred, up_pred = out[..., 0], out[..., 1]
+        loss, reg, ortho, _ = loss_func(
+            u_pred, u, up_pred, up, preds_latent=y_latent)
+    elif out.size(2) == 1:
+        u_pred = out[..., 0]
+        loss, reg, ortho, _ = loss_func(
+            u_pred, u, targets_prime=up, preds_latent=y_latent)
+    loss = loss + reg + ortho
+    loss.backward()
+    nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+    optimizer.step()
+    if lr_scheduler:
+        lr_scheduler.step()
+    try:
+        up_pred = out[..., 1]
+    except:
+        up_pred = u_pred
+
+    return (loss.item(), reg.item(), ortho.item()), u_pred, up_pred
+
+def validate_epoch_burgers(model, metric_func, valid_loader, device):
+    model.eval()
+    metric_val = []
+    for _, data in enumerate(valid_loader):
+        with torch.no_grad():
+            x, edge = data["node"].to(device), data["edge"].to(device)
+            pos, grid = data['pos'].to(device), data['grid'].to(device)
+            out_ = model(x, edge, pos, grid)
+
+            if isinstance(out_, dict):
+                u_pred = out_['preds'][..., 0]
+            elif isinstance(out_, tuple):
+                u_pred = out_[0][..., 0]
+
+            target = data["target"].to(device)
+            u = target[..., 0]
+            _, _, _, metric = metric_func(u_pred, u)
+            try:
+                metric_val.append(metric.item())
+            except:
+                metric_val.append(metric)
+
+    return dict(metric=np.mean(metric_val, axis=0))
+
+def train_batch_darcy(model, loss_func, data, optimizer, lr_scheduler, device, grad_clip=0.99):
+    optimizer.zero_grad()
+    a, x, edge = data["coeff"].to(device), data["node"].to(
+        device), data["edge"].to(device)
+    pos, grid = data['pos'].to(device), data['grid'].to(device)
+    u, gradu = data["target"].to(device), data["target_grad"].to(device)
+
+    # pos is for attention, grid is the finest grid
+    out_ = model(x, edge, pos=pos, grid=grid)
+    if isinstance(out_, dict):
+        out = out_['preds']
+    elif isinstance(out_, tuple):
+        out = out_[0]
+
+    if out.ndim == 4:
+        u_pred, pred_grad, target = out[..., 0], out[..., 1:], u[..., 0]
+        loss, reg, _, _ = loss_func(u_pred, target, pred_grad, gradu, K=a)
+    elif out.ndim == 3:
+        u_pred, u = out[..., 0], u[..., 0]
+        loss, reg, _, _ = loss_func(u_pred, u, targets_prime=gradu, K=a)
+    loss = loss + reg
+    loss.backward()
+    nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+    optimizer.step()
+    if lr_scheduler:
+        lr_scheduler.step()
+    try:
+        up_pred = out[..., 1:]
+    except:
+        up_pred = u_pred
+
+    return (loss.item(), reg.item()), u_pred, up_pred
+
+def validate_epoch_darcy(model, metric_func, valid_loader, device):
+    model.eval()
+    metric_val = []
+    for _, data in enumerate(valid_loader):
+        with torch.no_grad():
+            x, edge = data["node"].to(device), data["edge"].to(device)
+            pos, grid = data['pos'].to(device), data['grid'].to(device)
+            out_ = model(x, edge, pos=pos, grid=grid)
+            if isinstance(out_, dict):
+                out = out_['preds']
+            elif isinstance(out_, tuple):
+                out = out_[0]
+            u_pred = out[..., 0]
+            target = data["target"].to(device)
+            u = target[..., 0]
+            _, _, metric, _ = metric_func(u_pred, u)
+            try:
+                metric_val.append(metric.item())
+            except:
+                metric_val.append(metric)
+
+    return dict(metric=np.mean(metric_val, axis=0))
 
 def run_train(model, loss_func, metric_func,
               train_loader, valid_loader,

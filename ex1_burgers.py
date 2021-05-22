@@ -6,99 +6,6 @@ from torch.optim.lr_scheduler import OneCycleLR
 SEED = 1127802
 DEBUG = False
 
-subsample = 4
-batch_size = 8
-val_batch_size = 4
-
-
-def get_data(train_portion=1024,
-             valid_portion=100,
-             batch_size=batch_size,
-             val_batch_size=val_batch_size,
-             subsample=subsample,
-             **kwargs):
-
-    data_path = os.path.join(DATA_PATH, 'burgers_data_R10.mat')
-    train_dataset = BurgersDataset(subsample=subsample,
-                                   train_data=True,
-                                   train_portion=train_portion,
-                                   data_path=data_path,)
-
-    valid_dataset = BurgersDataset(subsample=subsample,
-                                   train_data=False,
-                                   valid_portion=valid_portion,
-                                   data_path=data_path,)
-
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
-                              drop_last=True, **kwargs)
-    valid_loader = DataLoader(valid_dataset, batch_size=val_batch_size, shuffle=False,
-                              drop_last=False, **kwargs)
-    return train_loader, valid_loader
-
-
-def train_batch_burgers(model, loss_func, data, optimizer, lr_scheduler, device, grad_clip=0.999):
-    optimizer.zero_grad()
-    x, edge = data["node"].to(device), data["edge"].to(device)
-    pos, grid = data['pos'].to(device), data['grid'].to(device)
-    out_ = model(x, edge, pos, grid)
-
-    if isinstance(out_, dict):
-        out = out_['preds']
-        y_latent = out_['preds_latent']
-    elif isinstance(out_, tuple):
-        out = out_[-1]
-        y_latent = None
-
-    target = data["target"].to(device)
-    u, up = target[..., 0], target[..., 1]  # the targets are the first two
-
-    if out.size(2) == 2:
-        u_pred, up_pred = out[..., 0], out[..., 1]
-        loss, reg, ortho, _ = loss_func(
-            u_pred, u, up_pred, up, preds_latent=y_latent)
-    elif out.size(2) == 1:
-        u_pred = out[..., 0]
-        loss, reg, ortho, _ = loss_func(
-            u_pred, u, targets_prime=up, preds_latent=y_latent)
-    loss = loss + reg + ortho
-    loss.backward()
-    nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
-    optimizer.step()
-    if lr_scheduler:
-        lr_scheduler.step()
-    try:
-        up_pred = out[..., 1]
-    except:
-        up_pred = u_pred
-
-    return (loss.item(), reg.item(), ortho.item()), u_pred, up_pred
-
-
-def validate_epoch_burgers(model, metric_func, valid_loader, device):
-    model.eval()
-    metric_val = []
-    for _, data in enumerate(valid_loader):
-        with torch.no_grad():
-            x, edge = data["node"].to(device), data["edge"].to(device)
-            pos, grid = data['pos'].to(device), data['grid'].to(device)
-            out_ = model(x, edge, pos, grid)
-
-            if isinstance(out_, dict):
-                u_pred = out_['preds'][..., 0]
-            elif isinstance(out_, tuple):
-                u_pred = out_[-1][..., 0]
-
-            target = data["target"].to(device)
-            u = target[..., 0]
-            _, _, _, metric = metric_func(u_pred, u)
-            try:
-                metric_val.append(metric.item())
-            except:
-                metric_val.append(metric)
-
-    return dict(metric=np.mean(metric_val, axis=0))
-
-
 def main():
     parser = argparse.ArgumentParser(description='Example 1: Burgers equation')
     parser.add_argument('--subsample', type=int, default=4, metavar='subsample',
@@ -109,17 +16,17 @@ def main():
                         help='input batch size for validation (default: 4)')
     parser.add_argument('--attn-type', type=str, default='fourier', metavar='attn_type',
                         help='input attention type for encoders (possile: fourier (alias integral, local), galerkin (alias global), softmax (official PyTorch implementation), linear (standard Q(K^TV) with softmax), default: fourier)')
-    parser.add_argument('--xavier-init', type=float, default=1e-2, metavar='xavier_init',
+    parser.add_argument('--xavier-init', type=float, default=0.01, metavar='xavier_init',
                         help='input Xavier initialization strength for Q,K,V weights (default: 0.01)')
-    parser.add_argument('--diag-weight', type=float, default=1e-2, metavar='diag_weight',
+    parser.add_argument('--diag-weight', type=float, default=0.01, metavar='diag_weight',
                         help='input diagonal weight initialization strength for Q,K,V weights (default: 0.01)')
     parser.add_argument('--reg-layernorm', action='store_true', default=False,
                         help='use the conventional layer normalization')
     parser.add_argument('--epochs', type=int, default=100, metavar='N',
                         help='number of epochs to train (default: 100)')
-    parser.add_argument('--lr', type=float, default=1e-3, metavar='LR',
+    parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
                         help='max learning rate (default: 0.001)')
-    parser.add_argument('--gamma', type=float, default=1e-1, metavar='regularizer',
+    parser.add_argument('--gamma', type=float, default=0.1, metavar='regularizer',
                         help='strength of gradient regularizer (default: 0.1)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
@@ -129,13 +36,25 @@ def main():
     cuda = not args.no_cuda and torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     kwargs = {'pin_memory': True} if cuda else {}
+    get_seed(args.seed, printout=False)
 
-    get_seed(args.seed)
+    data_path = os.path.join(DATA_PATH, 'burgers_data_R10.mat')
+    train_dataset = BurgersDataset(subsample=args.subsample,
+                                   train_data=True,
+                                   train_portion=0.5,
+                                   data_path=data_path,)
 
-    train_loader, valid_loader = get_data(subsample=args.subsample,
-                                          batch_size=args.batch_size,
-                                          val_batch_size=args.val_batch_size,
-                                          **kwargs)
+    valid_dataset = BurgersDataset(subsample=args.subsample,
+                                   train_data=False,
+                                   valid_portion=100,
+                                   data_path=data_path,)
+
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
+                              drop_last=True, **kwargs)
+    valid_loader = DataLoader(valid_dataset, batch_size=args.val_batch_size, shuffle=False,
+                              drop_last=False, **kwargs)
+
+
     sample = next(iter(train_loader))
 
     print('='*20, 'Data loader batch', '='*20)
@@ -168,8 +87,9 @@ def main():
     config['attn_norm'] = not args.reg_layernorm
     if config['attention_type'] in ['softmax', 'linear']:
         config['encoder_dropout'] = 0.1
-        config['dropout'] = 0.05
+    #     config['dropout'] = 0.05
 
+    get_seed(args.seed)
     torch.cuda.empty_cache()
     model = FourierTransformer(**config)
     model = model.to(device)

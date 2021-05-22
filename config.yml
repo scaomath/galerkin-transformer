@@ -1,6 +1,5 @@
 
 ex1_burgers:
-  lambda: null
   node_feats: 1
   edge_feats: null
   pos_dim: 1
@@ -39,7 +38,6 @@ ex1_burgers:
 
 
 ex2_darcy:
-  lambda: null
   node_feats: 1
   pos_dim: 2
   n_targets: 1
@@ -80,7 +78,6 @@ ex2_darcy:
 
 
 ex3_darcy_inv:
-  lambda: null
   node_feats: 1
   pos_dim: 2
   n_targets: 1

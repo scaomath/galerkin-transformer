@@ -81,7 +81,8 @@ class FourierTransformerEncoderLayer(nn.Module):
         self.ff = FeedForward(d_model,
                               dim_feedforward=dim_feedforward,
                               batch_norm=batch_norm,
-                              activation=activation_type)
+                              activation=activation_type,
+                              dropout=dropout)
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
         self.residual_type = residual_type  # plus or minus

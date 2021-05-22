@@ -7,56 +7,6 @@ from torch.optim.lr_scheduler import OneCycleLR
 SEED = 1127802
 DEBUG = False
 
-subsample_attn = 6
-subsample_nodes = 2
-batch_size = 4
-val_batch_size = 4
-
-
-def get_data(train_len=1024,
-             valid_len=100,
-             random_state=SEED,
-             batch_size=batch_size,
-             val_batch_size=val_batch_size,
-             subsample_attn=subsample_attn,
-             subsample_nodes=subsample_nodes,
-             noise=0,
-             **kwargs):
-
-    train_path = os.path.join(DATA_PATH, 'piececonst_r421_N1024_smooth1.mat')
-    test_path = os.path.join(DATA_PATH, 'piececonst_r421_N1024_smooth2.mat')
-    train_dataset = DarcyDataset(data_path=train_path,
-                                 subsample_attn=subsample_attn,
-                                 subsample_nodes=subsample_nodes,
-                                 subsample_inverse=subsample_attn,
-                                 subsample_method='average',
-                                 inverse_problem=True,
-                                 train_data=True,
-                                 online_features=True if DEBUG else False,
-                                 noise=noise,
-                                 train_len=train_len if not DEBUG else 0.05,
-                                 random_state=random_state)
-
-    valid_dataset = DarcyDataset(data_path=test_path,
-                                 normalizer_x=train_dataset.normalizer_x,
-                                 subsample_attn=subsample_attn,
-                                 subsample_nodes=subsample_nodes,
-                                 subsample_inverse=subsample_attn,
-                                 subsample_method='average',
-                                 inverse_problem=True,
-                                 train_data=False,
-                                 noise=noise,
-                                 online_features=True if DEBUG else False,
-                                 valid_len=valid_len,
-                                 random_state=random_state)
-
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
-                              drop_last=True, **kwargs)
-    valid_loader = DataLoader(valid_dataset, batch_size=val_batch_size, shuffle=False,
-                              drop_last=False, **kwargs)
-    return train_loader, valid_loader, train_dataset
-
-
 def main():
 
     # Training settings
@@ -92,17 +42,38 @@ def main():
     cuda = not args.no_cuda and torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     kwargs = {'pin_memory': True} if cuda else {}
+    get_seed(args.seed)
 
-    torch.manual_seed(seed=args.seed)
-    torch.cuda.manual_seed(seed=args.seed)
+    train_path = os.path.join(DATA_PATH, 'piececonst_r421_N1024_smooth1.mat')
+    test_path = os.path.join(DATA_PATH, 'piececonst_r421_N1024_smooth2.mat')
+    train_dataset = DarcyDataset(data_path=train_path,
+                                 subsample_attn=args.subsample_attn,
+                                 subsample_nodes=args.subsample_nodes,
+                                 subsample_inverse=args.subsample_attn,
+                                 subsample_method='average',
+                                 inverse_problem=True,
+                                 train_data=True,
+                                 online_features=True if DEBUG else False,
+                                 noise=args.noise,
+                                 train_len=1024 if not DEBUG else 0.05,)
 
-    train_loader, valid_loader, train_dataset = get_data(
-        subsample_nodes=args.subsample_nodes,
-        subsample_attn=args.subsample_attn,
-        batch_size=args.batch_size,
-        val_batch_size=args.val_batch_size,
-        noise=args.noise,
-        **kwargs)
+    valid_dataset = DarcyDataset(data_path=test_path,
+                                 normalizer_x=train_dataset.normalizer_x,
+                                 subsample_attn=args.subsample_attn,
+                                 subsample_nodes=args.subsample_nodes,
+                                 subsample_inverse=args.subsample_attn,
+                                 subsample_method='average',
+                                 inverse_problem=True,
+                                 train_data=False,
+                                 noise=args.noise,
+                                 online_features=True if DEBUG else False,
+                                 valid_len=100,)
+
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
+                              drop_last=True, **kwargs)
+    valid_loader = DataLoader(valid_dataset, batch_size=args.val_batch_size, shuffle=False,
+                              drop_last=False, **kwargs)
+
     n_grid = int(((421 - 1)/args.subsample_nodes) + 1)
     n_grid_c = int(((421 - 1)/args.subsample_attn) + 1)
     downsample, _ = DarcyDataset.get_scaler_sizes(n_grid, n_grid_c)
@@ -147,6 +118,9 @@ def main():
         config['encoder_dropout'] = 0.1
         config['dropout'] = 0.05
 
+
+    torch.manual_seed(seed=args.seed)
+    torch.cuda.manual_seed(seed=args.seed)
     torch.cuda.empty_cache()
     model = FourierTransformer2D(**config)
     model = model.to(device)
