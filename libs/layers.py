@@ -10,6 +10,11 @@ import math
 import copy
 from functools import partial
 
+def default(value, d):
+    '''
+    helper taken from https://github.com/lucidrains/linear-attention-transformer
+    '''
+    return d if value is None else value
 
 class Identity(nn.Module):
     '''
@@ -93,8 +98,7 @@ class Conv2dResBlock(nn.Module):
                  basic_block=False,
                  activation_type='silu'):
         super(Conv2dResBlock, self).__init__()
-        if activation_type is None:
-            activation_type = 'silu'
+        activation_type = default(activation_type, 'silu')
         self.activation = nn.SiLU() if activation_type == 'silu' else nn.ReLU()
         self.add_res = residual
         self.conv = nn.Sequential(
@@ -294,8 +298,7 @@ class Conv2dEncoder(nn.Module):
         conv_dim2 = int(out_dim - conv_dim0 - conv_dim1)
         padding1 = padding//2 if padding//2 >= 1 else 1
         padding2 = padding//4 if padding//4 >= 1 else 1
-        if activation_type is None:
-            activation_type = 'silu'
+        activation_type = default(activation_type, 'silu')
         self.conv0 = Conv2dResBlock(in_dim, out_dim, kernel_size=kernel_size,
                                     padding=padding,
                                     residual=residual)
@@ -355,8 +358,7 @@ class Interp2dEncoder(nn.Module):
         conv_dim2 = int(out_dim - conv_dim0 - conv_dim1)
         padding1 = padding//2 if padding//2 >= 1 else 1
         padding2 = padding//4 if padding//4 >= 1 else 1
-        if activation_type is None:
-            activation_type = 'silu'
+        activation_type = default(activation_type, 'silu')
         self.conv0 = Conv2dResBlock(in_dim, out_dim, kernel_size=kernel_size,
                                     padding=padding, activation_type=activation_type,
                                     dropout=dropout,
@@ -486,8 +488,7 @@ class Interp2dUpsample(nn.Module):
                  dropout=0.1,
                  debug=False):
         super(Interp2dUpsample, self).__init__()
-        if activation_type is None:
-            activation_type = 'silu'
+        activation_type = default(activation_type, 'silu')
         self.activation = nn.SiLU() if activation_type == 'silu' else nn.ReLU()
         self.dropout = nn.Dropout(dropout)
         if conv_block:
@@ -626,6 +627,7 @@ class SimpleAttention(nn.Module):
                  symmetric_init=False,
                  norm=False,
                  norm_type='layer',
+                 eps=1e-5,
                  debug=False):
         super(SimpleAttention, self).__init__()
         assert d_model % n_head == 0
@@ -644,19 +646,19 @@ class SimpleAttention(nn.Module):
             if self.attention_type in ['linear', 'galerkin', 'global']:
                 if norm_type == 'instance':
                     self.norm_K = nn.ModuleList(
-                        [copy.deepcopy(nn.InstanceNorm1d(self.d_k)) for _ in range(n_head)])
+                        [copy.deepcopy(nn.InstanceNorm1d(self.d_k, eps=eps)) for _ in range(n_head)])
                     self.norm_V = nn.ModuleList(
-                        [copy.deepcopy(nn.InstanceNorm1d(self.d_k)) for _ in range(n_head)])
+                        [copy.deepcopy(nn.InstanceNorm1d(self.d_k, eps=eps)) for _ in range(n_head)])
                 elif norm_type == 'layer':
                     self.norm_K = nn.ModuleList(
-                        [copy.deepcopy(nn.LayerNorm(self.d_k)) for _ in range(n_head)])
+                        [copy.deepcopy(nn.LayerNorm(self.d_k, eps=eps)) for _ in range(n_head)])
                     self.norm_V = nn.ModuleList(
-                        [copy.deepcopy(nn.LayerNorm(self.d_k)) for _ in range(n_head)])
+                        [copy.deepcopy(nn.LayerNorm(self.d_k, eps=eps)) for _ in range(n_head)])
             else:
                 self.norm_K = nn.ModuleList(
-                    [copy.deepcopy(nn.LayerNorm(self.d_k)) for _ in range(n_head)])
+                    [copy.deepcopy(nn.LayerNorm(self.d_k, eps=eps)) for _ in range(n_head)])
                 self.norm_Q = nn.ModuleList(
-                    [copy.deepcopy(nn.LayerNorm(self.d_k)) for _ in range(n_head)])
+                    [copy.deepcopy(nn.LayerNorm(self.d_k, eps=eps)) for _ in range(n_head)])
         self.add_norm = norm
         self.norm_type = norm_type
 
@@ -751,8 +753,7 @@ class FeedForward(nn.Module):
                  activation='relu',
                  dropout=0.1):
         super(FeedForward, self).__init__()
-        if out_dim is None:
-            out_dim = in_dim
+        out_dim = default(out_dim, in_dim)
         n_hidden = dim_feedforward
         self.lr1 = nn.Linear(in_dim, n_hidden)
 
@@ -805,7 +806,7 @@ class BulkRegressor(nn.Module):
                  sort_output=False,
                  dropout=0.1):
         super(BulkRegressor, self).__init__()
-        n_hidden = pred_len * 4 if n_hidden is None else n_hidden
+        n_hidden = default(n_hidden, pred_len * 4)
         self.linear = nn.Linear(n_feats, n_targets)
         freq_out = nn.Sequential(
             nn.Linear(in_dim, n_hidden),
@@ -848,10 +849,8 @@ class SpectralConv1d(nn.Module):
 
         self.linear = nn.Linear(in_dim, out_dim)  # for residual
         self.modes = modes
-        if activation == 'silu' or activation is None:
-            self.activation = nn.SiLU()
-        else:
-            self.activation = nn.ReLU()
+        activation = default(activation, 'silu')
+        self.activation = nn.SiLU() if activation == 'silu' else nn.ReLU()
         self.n_grid = n_grid  # just for debugging
         self.fourier_weight = Parameter(
             torch.FloatTensor(in_dim, out_dim, modes, 2))
@@ -921,10 +920,8 @@ class SpectralConv2d(nn.Module):
         self.out_dim = out_dim
         self.linear = nn.Linear(in_dim, out_dim)  # for residual
         self.modes = modes
-        if activation == 'silu' or activation is None:
-            self.activation = nn.SiLU()
-        else:
-            self.activation = nn.ReLU()
+        activation = default(activation, 'silu')
+        self.activation = nn.SiLU() if activation == 'silu' else nn.ReLU()
         self.n_grid = n_grid  # just for debugging
         self.fourier_weight = nn.ParameterList([Parameter(
             torch.FloatTensor(in_dim, out_dim,

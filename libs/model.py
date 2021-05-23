@@ -15,8 +15,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 from torch.nn import MultiheadAttention
-from torch.nn.init import constant_, xavier_normal_, xavier_uniform_
-from torch.nn.modules import activation
+from torch.nn.init import constant_, xavier_uniform_
 from torchinfo import summary
 
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -25,10 +24,10 @@ sys.path.append(HOME)
 
 ADDITIONAL_ATTR = ['normalizer', 'raw_laplacian', 'return_latent',
                    'residual_type', 'norm_type', 'boundary_condition',
-                   'upscaler_size', 'downscaler_size',
-                   'regressor_activation', 'attn_activation',
+                   'upscaler_size', 'downscaler_size', 'spacial_dim', 'spacial_fc',
+                   'regressor_activation', 'attn_activation', 'norm_eps',
                    'downscaler_activation', 'upscaler_activation',
-                   'encoder_dropout', 'decoder_dropout','ffn_dropout']
+                   'encoder_dropout', 'decoder_dropout', 'ffn_dropout']
 
 
 class FourierTransformerEncoderLayer(nn.Module):
@@ -42,6 +41,7 @@ class FourierTransformerEncoderLayer(nn.Module):
                  layer_norm=True,
                  attn_norm=None,
                  norm_type='layer',
+                 norm_eps=None,
                  batch_norm=False,
                  attn_weight=False,
                  xavier_init: float = 1e-2,
@@ -54,14 +54,15 @@ class FourierTransformerEncoderLayer(nn.Module):
                  debug=False,
                  ):
         super(FourierTransformerEncoderLayer, self).__init__()
-        if dropout is None:
-            dropout = 0.05
+
+        dropout = default(dropout, 0.05)
         if attention_type in ['linear', 'softmax']:
             dropout = 0.1
-        if ffn_dropout is None:
-            ffn_dropout = dropout
-        attn_norm = not layer_norm if attn_norm is None else attn_norm
-        norm_type = 'layer' if norm_type is None else norm_type
+        ffn_dropout = default(dropout, dropout)
+        norm_eps = default(norm_eps, 1e-5)
+        attn_norm = default(attn_norm, not layer_norm)
+        norm_type = default(norm_type, 'layer')
+
         self.attn = SimpleAttention(n_head=n_head,
                                     d_model=d_model,
                                     attention_type=attention_type,
@@ -71,21 +72,22 @@ class FourierTransformerEncoderLayer(nn.Module):
                                     pos_dim=pos_dim,
                                     norm=attn_norm,
                                     norm_type=norm_type,
+                                    eps=norm_eps,
                                     dropout=dropout)
         self.d_model = d_model
         self.n_head = n_head
         self.pos_dim = pos_dim
         self.add_layer_norm = layer_norm
         if layer_norm:
-            self.layer_norm1 = nn.LayerNorm(d_model, eps=1e-7)
-            self.layer_norm2 = nn.LayerNorm(d_model, eps=1e-7)
-        if dim_feedforward is None:
-            dim_feedforward = 2*d_model
-        self.ff = FeedForward(d_model,
+            self.layer_norm1 = nn.LayerNorm(d_model, eps=norm_eps)
+            self.layer_norm2 = nn.LayerNorm(d_model, eps=norm_eps)
+        dim_feedforward = default(dim_feedforward, 2*d_model)
+        self.ff = FeedForward(in_dim=d_model,
                               dim_feedforward=dim_feedforward,
                               batch_norm=batch_norm,
                               activation=activation_type,
-                              dropout=ffn_dropout)
+                              dropout=ffn_dropout,
+                              )
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
         self.residual_type = residual_type  # plus or minus
@@ -381,8 +383,7 @@ class PointwiseRegressor(nn.Module):
         '''
         A wrapper for a simple pointwise linear layers
         '''
-        if dropout is None:
-            dropout = 0.1
+        dropout = default(dropout, 0.1)
         self.spacial_fc = spacial_fc
         activ = nn.SiLU() if activation == 'silu' else nn.ReLU()
         if self.spacial_fc:
@@ -460,12 +461,9 @@ class SpectralRegressor(nn.Module):
             spectral_conv = SpectralConv1d
         else:
             raise NotImplementedError("3D not implemented.")
-        if activation == 'silu' or activation is None:
-            self.activation = nn.SiLU()
-        else:
-            self.activation = nn.ReLU()
-        if dropout is None:
-            dropout = 0.1
+        activation = default(activation, 'silu')
+        self.activation = nn.SiLU() if activation == 'silu' else nn.ReLU()
+        dropout = default(dropout, 0.1)
         self.spacial_fc = spacial_fc  # False in Transformer
         if self.spacial_fc:
             self.fc = nn.Linear(in_dim + spacial_dim, n_hidden)
@@ -490,8 +488,7 @@ class SpectralRegressor(nn.Module):
             self.spectral_conv[-1].activation = Identity()
 
         self.n_grid = n_grid  # dummy for debug
-        self.dim_feedforward = 2*spacial_dim * \
-            freq_dim if dim_feedforward is None else dim_feedforward
+        self.dim_feedforward = default(dim_feedforward, 2*spacial_dim*freq_dim)
         self.regressor = nn.Sequential(
             nn.Linear(freq_dim, self.dim_feedforward),
             self.activation,
@@ -607,7 +604,7 @@ class UpScaler(nn.Module):
         Deconv: Conv1dTranspose
         Interp: interp->conv->interp
         '''
-        hidden_dim = in_dim if hidden_dim is None else hidden_dim
+        hidden_dim = default(hidden_dim, in_dim)
         if upsample_mode in ['conv', 'deconv']:
             self.upsample = nn.Sequential(
                 DeConv2dBlock(in_dim=in_dim,
@@ -726,12 +723,11 @@ class FourierTransformer(nn.Module):
         for key in all_attr:
             setattr(self, key, self.config[key])
 
-        self.dim_feedforward = 2 * \
-            self.n_hidden if self.dim_feedforward is None else self.dim_feedforward
-        self.spacial_dim = self.pos_dim if self.config['spacial_dim'] is None else self.spacial_dim
-        self.spacial_fc = False if self.config['spacial_fc'] is None else self.spacial_fc
-        self.dp = nn.Dropout(
-            0.1 if self.dropout is None else self.dropout)
+        self.dim_feedforward = default(self.dim_feedforward, 2*self.n_hidden)
+        self.spacial_dim = default(self.spacial_dim, self.pos_dim)
+        self.spacial_fc = default(self.spacial_fc, False)
+        self.dropout = default(self.dropout, 0.05)
+        self.dpo = nn.Dropout(self.dropout)
         if self.decoder_type == 'attention':
             self.num_ft_layers += 1
         self.attention_types = ['fourier', 'integral',
@@ -864,7 +860,7 @@ class FourierTransformer2D(nn.Module):
         x = x.view(bsz, -1, self.n_hidden)
 
         x = self.feat_extract(x, edge)
-        x = self.dropout(x)
+        x = self.dpo(x)
 
         for encoder in self.encoder_layers:
             if self.return_attn_weight:
@@ -877,7 +873,7 @@ class FourierTransformer2D(nn.Module):
 
         x = x.view(bsz, n_s, n_s, self.n_hidden)
         x = self.upscaler(x)
-        x = self.dropout(x)
+        x = self.dpo(x)
 
         if self.return_latent:
             x, xr_latent = self.regressor(x, grid=grid)
@@ -943,10 +939,9 @@ class FourierTransformer2D(nn.Module):
         for key in all_attr:
             setattr(self, key, self.config[key])
 
-        self.dim_feedforward = 2 * \
-            self.n_hidden if self.dim_feedforward is None else self.dim_feedforward
-        self.dropout = nn.Dropout(
-            0.1 if self.dropout is None else self.dropout)
+        self.dim_feedforward = default(self.dim_feedforward, 2*self.n_hidden)
+        self.dropout = default(self.dropout, 0.05)
+        self.dpo = nn.Dropout(self.dropout)
         if self.decoder_type == 'attention':
             self.num_ft_layers += 1
         self.attention_types = ['fourier', 'integral', 'local', 'global',

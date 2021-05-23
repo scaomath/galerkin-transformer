@@ -9,6 +9,7 @@ Best Fourier Transformer model:
 python ex1_burgers.py --subsample 1\
                       --attention-type 'fourier'\
                       --xavier-init 0.001 --diag-weight 0.01\
+                      --ffn-dropout 0.05\
                       --batch-size 4
 ```
 
