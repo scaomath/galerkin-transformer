@@ -3,7 +3,21 @@
 [![Python 3.7](https://img.shields.io/badge/python-3.7-blue.svg)](https://www.python.org/downloads/release/python-370/)
 [![Pytorch 1.8](https://img.shields.io/badge/pytorch-1.8-blue.svg)](https://pytorch.org/)
 
-This is the repository for paper:
+TL;DR:
+The new attention operator is `(QK^T)V` or `Q(K^TV)`, whichever doing matmul gets the layer normalization, i.e., `Q, K` get layer normalized in local attention, as for `K, V` in global attention. No softmax, no layer normalization is applied afterward. This is called a scaling-preserving simple attention. Combining with proper feature extractor and decoder, it is extremely powerful in learning PDE-related operators (energy decay, inverse coefficient identification).
+
+
+For details please refer to:
+```latex
+@Misc{Cao:2021transformer,
+  author        = {Shuhao Cao},
+  title         = {Choose a Transformer: Fourier or Galerkin},
+  year          = {2021},
+  archiveprefix = {arXiv},
+  eprint        = {},
+  primaryclass  = {cs.CL},
+}
+```
 
 
 # Requirements
@@ -34,12 +48,12 @@ python ex1_burgers.py
 No subsampling (8192 grid), Galerkin-type attention, adding a diagonal matrix to the Xavier initializations of the `W^Q, W^K, W^V` matrices (about 30%-1000% better than those without depending on other settings).
 ```bash
 python ex1_burgers.py --subsample 1\
-                      --attn-type 'galerkin'\
+                      --attention-type 'galerkin'\
                       --xavier-init 0.01 --diag-weight 0.01
 ```
 Using standard softmax normalization `Softmax(QK^T/sqrt{d})V`, conventional layer normalization application scheme in attention layers
 ```bash
-python ex1_burgers.py --attn-type 'softmax'\
+python ex1_burgers.py --attention-type 'softmax'\
                       --reg-layernorm\
                       --xavier-init 1.0 --diag-weight 0.0
 ```
@@ -55,7 +69,7 @@ For a smaller memory GPU or CPU, please use the 85x85 grid fine, 29x29 coarse gr
 ```bash
 python ex2_darcy.py --subsample-attn 15\
                     --subsample-nodes 5\
-                    --attn-type 'galerkin'\
+                    --attention-type 'galerkin'\
                     --reg-layernorm\
                     --xavier-init 0.01 --diag-weight 0.01
 ```
@@ -66,11 +80,11 @@ Default benchmark is on a 211x211 fine grid input and a 71x71 coarse grid coeffi
 ```bash
 python ex3_darcy_inv.py --noise 0.01
 ```
-For a smaller memory GPU, please use the 141x141 grid fine, 36x36 coarse grid, and avoid using the local attention `fourier` or `softmax` in the `--attn-type` switch:
+For a smaller memory GPU, please use the 141x141 grid fine, 36x36 coarse grid, and avoid using the local attention `fourier` or `softmax` in the `--attention-type` switch:
 ```bash
 python ex3_darcy_inv.py --subsample-attn 12\
                         --subsample-nodes 3\
-                        --attn-type 'galerkin'\
+                        --attention-type 'galerkin'\
                         --xavier-init 0.01 --diag-weight 0.01
 ```
 
@@ -79,16 +93,16 @@ Using CUDA, Fourier Transformer features an over 40% reduction in `self_cuda_mem
 
 Example 1 memory profile of a model with 96 hidden dimension with an input sequence length 8192. Compare the memory usage of the Fourier transformer with the one with softmax
 ```bash
-python ex1_memory_profile.py --batch-size 2 --seq-len 8192 --dmodel 96 --attn-type 'softmax' 'fourier'
+python ex1_memory_profile.py --batch-size 2 --seq-len 8192 --dmodel 96 --attention-type 'softmax' 'fourier'
 ```
 Compare the backpropagation time usage of the Galerkin transformer versus the same net, but with Galerkin-type simple attention replaced by the standard linearized attention. 
 ```bash
-python ex1_memory_profile.py --batch-size 2 --seq-len 8192 --dmodel 96 --num-iter 100 --attn-type 'linear' 'galerkin'
+python ex1_memory_profile.py --batch-size 2 --seq-len 8192 --dmodel 96 --num-iter 100 --attention-type 'linear' 'galerkin'
 ```
 
 Example 2 memory profile of a 2D model with 64 hidden dimension, using the default `141x141` fine grid, `43x43` coarse grid set up.
 ```bash
-python ex2_memory_profile.py --batch-size 2 --dmodel 64 --attn-type 'softmax' 'fourier' 'linear' 'galerkin'
+python ex2_memory_profile.py --batch-size 2 --dmodel 64 --attention-type 'softmax' 'fourier' 'linear' 'galerkin'
 ```
 
 Encoder layer wrapper profiling: profile a wrapper with 10 layers of encoder in a model for operators defined for functions whose domain is isomorphic to a 2D Euclidean space.

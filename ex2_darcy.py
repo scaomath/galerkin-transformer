@@ -18,7 +18,7 @@ def main():
                         help='input batch size for training (default: 4)')
     parser.add_argument('--val-batch-size', type=int, default=4, metavar='N',
                         help='input batch size for validation (default: 4)')
-    parser.add_argument('--attn-type', type=str, default='galerkin', metavar='attn_type',
+    parser.add_argument('--attention-type', type=str, default='galerkin', metavar='attn_type',
                         help='input attention type for encoders (possile: fourier (alias integral, local), galerkin (alias global), softmax (official PyTorch implementation), linear (standard Q(K^TV) with softmax), default: galerkin)')
     parser.add_argument('--xavier-init', type=float, default=1e-2, metavar='xavier_init',
                         help='input Xavier initialization strength for Q,K,V weights (default: 0.01)')
@@ -97,17 +97,12 @@ def main():
         config = yaml.full_load(f)
     test_name = os.path.basename(__file__).split('.')[0]
     config = config[test_name]
-    config['attention_type'] = args.attn_type
-    config['diagonal_weight'] = args.diag_weight
-    config['xavier_init'] = args.xavier_init
     config['normalizer'] = train_dataset.normalizer_y.to(device)
     config['downscaler_size'] = downsample
     config['upscaler_size'] = upsample
-    config['layer_norm'] = args.reg_layernorm
-    config['attn_norm'] = not args.reg_layernorm
-    # if config['attention_type'] in ['softmax', 'linear']:
-    #     config['encoder_dropout'] = 0.1
-    #     config['dropout'] = 0.05
+    for arg in vars(args):
+        if arg in config.keys():
+            config[arg] = getattr(args, arg)
 
     torch.manual_seed(seed=args.seed)
     torch.cuda.manual_seed(seed=args.seed)

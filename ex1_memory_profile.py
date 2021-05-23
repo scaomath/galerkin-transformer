@@ -11,7 +11,7 @@ def main():
         description='Memory profiling of various transformers for Example 1')
     parser.add_argument('--batch-size', type=int, default=4, metavar='N',
                         help='input batch size for profiling (default: 4)')
-    parser.add_argument('--attn-type', nargs='+', metavar='attn_type', 
+    parser.add_argument('--attention-type', nargs='+', metavar='attn_type', 
                         help='input the attention type for encoders to profile (possile: fourier (alias integral, local), galerkin (alias global), softmax (official PyTorch implementation), linear (standard Q(K^TV) with softmax))',
                         required=True)
     parser.add_argument('--seq-len', type=int, default=8192, metavar='L',
@@ -34,7 +34,7 @@ def main():
     config['layer_norm'] = args.reg_layernorm
     config['attn_norm'] = not args.reg_layernorm
     config['n_hidden'] = args.dmodel
-    attn_types = args.attn_type
+    attn_types = args.attention_type
 
     for attn_type in attn_types:
         config['attention_type'] = attn_type

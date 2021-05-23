@@ -28,7 +28,7 @@ ADDITIONAL_ATTR = ['normalizer', 'raw_laplacian', 'return_latent',
                    'upscaler_size', 'downscaler_size',
                    'regressor_activation', 'attn_activation',
                    'downscaler_activation', 'upscaler_activation',
-                   'encoder_dropout', 'decoder_dropout', ]
+                   'encoder_dropout', 'decoder_dropout','ffn_dropout']
 
 
 class FourierTransformerEncoderLayer(nn.Module):
@@ -50,13 +50,16 @@ class FourierTransformerEncoderLayer(nn.Module):
                  residual_type='add',
                  activation_type='relu',
                  dropout=0.1,
+                 ffn_dropout=None,
                  debug=False,
                  ):
         super(FourierTransformerEncoderLayer, self).__init__()
         if dropout is None:
-            dropout = 0.1
+            dropout = 0.05
         if attention_type in ['linear', 'softmax']:
             dropout = 0.1
+        if ffn_dropout is None:
+            ffn_dropout = dropout
         attn_norm = not layer_norm if attn_norm is None else attn_norm
         norm_type = 'layer' if norm_type is None else norm_type
         self.attn = SimpleAttention(n_head=n_head,
@@ -82,7 +85,7 @@ class FourierTransformerEncoderLayer(nn.Module):
                               dim_feedforward=dim_feedforward,
                               batch_norm=batch_norm,
                               activation=activation_type,
-                              dropout=dropout)
+                              dropout=ffn_dropout)
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
         self.residual_type = residual_type  # plus or minus
@@ -773,6 +776,7 @@ class FourierTransformer(nn.Module):
                                                            residual_type=self.residual_type,
                                                            activation_type=self.attn_activation,
                                                            dropout=self.encoder_dropout,
+                                                           ffn_dropout=self.ffn_dropout,
                                                            debug=self.debug)
         else:
             encoder_layer = TransformerEncoderLayer(d_model=self.n_hidden,
@@ -1004,6 +1008,7 @@ class FourierTransformer2D(nn.Module):
                                                            symmetric_init=self.symmetric_init,
                                                            attn_weight=self.return_attn_weight,
                                                            dropout=self.encoder_dropout,
+                                                           ffn_dropout=self.ffn_dropout,
                                                            debug=self.debug)
         elif self.attention_type == 'official':
             encoder_layer = TransformerEncoderLayer(d_model=self.n_hidden,
