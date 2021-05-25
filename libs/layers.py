@@ -10,11 +10,13 @@ import math
 import copy
 from functools import partial
 
+
 def default(value, d):
     '''
     helper taken from https://github.com/lucidrains/linear-attention-transformer
     '''
     return d if value is None else value
+
 
 class Identity(nn.Module):
     '''
@@ -879,7 +881,7 @@ class SpectralConv1d(nn.Module):
 
         x = x.permute(0, 2, 1)
         x_ft = fft.rfft(x, n=seq_len, norm="ortho")
-        x_ft = torch.stack([x_ft.real, x_ft.imag], dim=3)
+        x_ft = torch.stack([x_ft.real, x_ft.imag], dim=-1)
 
         out_ft = self.complex_matmul_1d(
             x_ft[:, :, :self.modes], self.fourier_weight)
@@ -967,7 +969,7 @@ class SpectralConv2d(nn.Module):
 
         x = x.permute(0, 3, 1, 2)
         x_ft = fft.rfft2(x, s=(n, n), norm=self.norm)
-        x_ft = torch.stack([x_ft.real, x_ft.imag], dim=4)
+        x_ft = torch.stack([x_ft.real, x_ft.imag], dim=-1)
 
         out_ft = torch.zeros(batch_size, out_dim, n, n //
                              2+1, 2, device=x.device)

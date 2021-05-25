@@ -689,7 +689,7 @@ class FourierTransformer(nn.Module):
         x_freq = self.freq_regressor(
             x)[:, :self.pred_len, :] if self.n_freq_targets > 0 else None
 
-        x = self.dp(x)
+        x = self.dpo(x)
         x = self.regressor(x, grid=grid)
 
         return dict(preds=x,
@@ -698,7 +698,7 @@ class FourierTransformer(nn.Module):
                     attn_weights=attn_weights)
 
     def _initialize(self):
-        self._get_graph()
+        self._get_feature()
 
         self._get_encoder()
 
@@ -733,7 +733,7 @@ class FourierTransformer(nn.Module):
         self.attention_types = ['fourier', 'integral',
                                 'cosine', 'galerkin', 'linear', 'softmax']
 
-    def _get_graph(self):
+    def _get_feature(self):
         if self.num_feat_layers > 0 and self.feat_extract_type == 'gcn':
             self.feat_extract = GCN(node_feats=self.node_feats,
                                     edge_feats=self.edge_feats,
@@ -892,7 +892,7 @@ class FourierTransformer2D(nn.Module):
                     attn_weights=attn_weights)
 
     def _initialize(self):
-        self._get_graph()
+        self._get_feature()
         self._get_scaler()
         self._get_encoder()
         self._get_regressor()
@@ -921,7 +921,7 @@ class FourierTransformer2D(nn.Module):
                 constant_(param, 0)
 
     @staticmethod
-    def get_pos(pos, downsample):
+    def _get_pos(pos, downsample):
         '''
         get the downscaled position in 2d
         '''
@@ -947,7 +947,7 @@ class FourierTransformer2D(nn.Module):
         self.attention_types = ['fourier', 'integral', 'local', 'global',
                                 'cosine', 'galerkin', 'linear', 'softmax']
 
-    def _get_graph(self):
+    def _get_feature(self):
         if self.feat_extract_type == 'gcn' and self.num_feat_layers > 0:
             self.feat_extract = GCN(node_feats=self.n_hidden,
                                     edge_feats=self.edge_feats,
@@ -1050,51 +1050,51 @@ class FourierTransformer2D(nn.Module):
 
 
 if __name__ == '__main__':
+    for graph in ['gcn', 'gat']:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        config = defaultdict(lambda: None,
+                            node_feats=1,
+                            edge_feats=5,
+                            pos_dim=1,
+                            n_targets=1,
+                            n_hidden=96,
+                            num_feat_layers=2,
+                            num_ft_layers=2,
+                            n_head=2,
+                            pred_len=0,
+                            n_freq_targets=0,
+                            dim_feedforward=96*2,
+                            feat_extract_type=graph,
+                            graph_activation=True,
+                            raw_laplacian=True,
+                            attention_type='fourier',  # no softmax
+                            xavier_init=1e-4,
+                            diagonal_weight=1e-2,
+                            symmetric_init=False,
+                            layer_norm=True,
+                            attn_norm=False,
+                            batch_norm=False,
+                            spacial_residual=False,
+                            return_attn_weight=True,
+                            seq_len=None,
+                            bulk_regression=False,
+                            decoder_type='ifft',
+                            freq_dim=64,
+                            num_regressor_layers=2,
+                            fourier_modes=16,
+                            spacial_dim=1,
+                            spacial_fc=True,
+                            dropout=0.1,
+                            debug=False,
+                            )
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    config = defaultdict(lambda: None,
-                         node_feats=1,
-                         edge_feats=5,
-                         pos_dim=1,
-                         n_targets=1,
-                         n_hidden=96,
-                         num_feat_layers=2,
-                         num_ft_layers=2,
-                         n_head=2,
-                         pred_len=0,
-                         n_freq_targets=0,
-                         dim_feedforward=96*2,
-                         feat_extract_type='gcn',
-                         graph_activation=True,
-                         raw_laplacian=True,
-                         attention_type='fourier',  # no softmax
-                         xavier_init=1e-4,
-                         diagonal_weight=1e-2,
-                         symmetric_init=False,
-                         layer_norm=True,
-                         attn_norm=False,
-                         batch_norm=False,
-                         spacial_residual=False,
-                         return_attn_weight=True,
-                         seq_len=None,
-                         bulk_regression=False,
-                         decoder_type='ifft',
-                         freq_dim=64,
-                         num_regressor_layers=2,
-                         fourier_modes=16,
-                         spacial_dim=1,
-                         spacial_fc=True,
-                         dropout=0.1,
-                         debug=False,
-                         )
-
-    ft = FourierTransformer(**config)
-    ft.to(device)
-    n_batch, seq_len = 8, 512
-    summary(ft, input_size=[(n_batch, seq_len, 1),
-                            (n_batch, seq_len, seq_len, 5),
-                            (n_batch, seq_len, 1),
-                            (n_batch, seq_len, 1)], device=device)
+        ft = FourierTransformer(**config)
+        ft.to(device)
+        n_batch, seq_len = 8, 512
+        summary(ft, input_size=[(n_batch, seq_len, 1),
+                                (n_batch, seq_len, seq_len, 5),
+                                (n_batch, seq_len, 1),
+                                (n_batch, seq_len, 1)], device=device)
 
     layer = TransformerEncoderLayer(d_model=128, nhead=4)
     print(layer.__class__)
