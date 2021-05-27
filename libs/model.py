@@ -58,7 +58,7 @@ class FourierTransformerEncoderLayer(nn.Module):
         dropout = default(dropout, 0.05)
         if attention_type in ['linear', 'softmax']:
             dropout = 0.1
-        ffn_dropout = default(dropout, dropout)
+        ffn_dropout = default(ffn_dropout, dropout)
         norm_eps = default(norm_eps, 1e-5)
         attn_norm = default(attn_norm, not layer_norm)
         norm_type = default(norm_type, 'layer')

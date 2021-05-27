@@ -32,8 +32,8 @@ ex1_burgers:
   spacial_dim: 1
   spacial_fc: False
   dropout: 0.0
-  ffn_dropout: 0.0
   encoder_dropout: 0.0
+  ffn_dropout: 0.0
   decoder_dropout: 0.0
   debug: False
 
@@ -54,6 +54,7 @@ ex2_darcy:
   symmetric_init: False
   layer_norm: False
   attn_norm: True
+  norm_eps: 1e-7
   batch_norm: False
   return_attn_weight: False
   return_latent: False
@@ -95,11 +96,12 @@ ex3_darcy_inv:
   symmetric_init: False
   layer_norm: True
   attn_norm: False
+  norm_eps: 1e-7
   batch_norm: False
   return_attn_weight: False
   return_latent: False
   decoder_type: pointwise
-  regressor_activation: relu
+  regressor_activation: silu
   spacial_dim: 2
   spacial_fc: True
   upsample_mode: interp

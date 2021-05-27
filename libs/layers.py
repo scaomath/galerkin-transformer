@@ -636,33 +636,18 @@ class SimpleAttention(nn.Module):
         self.attention_type = attention_type
         self.d_k = d_model // n_head
         self.n_head = n_head
+        self.pos_dim = pos_dim
         self.linears = nn.ModuleList(
             [copy.deepcopy(nn.Linear(d_model, d_model)) for _ in range(3)])
         self.xavier_init = xavier_init
         self.diagonal_weight = diagonal_weight
         self.symmetric_init = symmetric_init
         if self.xavier_init > 0:
-            self._initialize()
-        self.pos_dim = pos_dim
-        if norm:
-            if self.attention_type in ['linear', 'galerkin', 'global']:
-                if norm_type == 'instance':
-                    self.norm_K = nn.ModuleList(
-                        [copy.deepcopy(nn.InstanceNorm1d(self.d_k, eps=eps)) for _ in range(n_head)])
-                    self.norm_V = nn.ModuleList(
-                        [copy.deepcopy(nn.InstanceNorm1d(self.d_k, eps=eps)) for _ in range(n_head)])
-                elif norm_type == 'layer':
-                    self.norm_K = nn.ModuleList(
-                        [copy.deepcopy(nn.LayerNorm(self.d_k, eps=eps)) for _ in range(n_head)])
-                    self.norm_V = nn.ModuleList(
-                        [copy.deepcopy(nn.LayerNorm(self.d_k, eps=eps)) for _ in range(n_head)])
-            else:
-                self.norm_K = nn.ModuleList(
-                    [copy.deepcopy(nn.LayerNorm(self.d_k, eps=eps)) for _ in range(n_head)])
-                self.norm_Q = nn.ModuleList(
-                    [copy.deepcopy(nn.LayerNorm(self.d_k, eps=eps)) for _ in range(n_head)])
+            self._reset_parameters()
         self.add_norm = norm
         self.norm_type = norm_type
+        if norm:
+            self._get_norm(eps=eps)
 
         if pos_dim > 0:
             self.fc = nn.Linear(d_model + n_head*pos_dim, d_model)
@@ -698,12 +683,18 @@ class SimpleAttention(nn.Module):
                 if self.norm_type == 'instance':
                     key, value = key.transpose(-2, -1), value.transpose(-2, -1)
             else:
+                if self.norm_type == 'instance':
+                    key, query = key.transpose(-2, -1), query.transpose(-2, -1)
+
                 key = torch.stack(
                     [norm(x) for norm, x in
                      zip(self.norm_K, (key[:, i, ...] for i in range(self.n_head)))], dim=1)
                 query = torch.stack(
                     [norm(x) for norm, x in
                      zip(self.norm_Q, (query[:, i, ...] for i in range(self.n_head)))], dim=1)
+
+                if self.norm_type == 'instance':
+                    key, query = key.transpose(-2, -1), value.transpose(-2, -1)
 
         if pos is not None and self.pos_dim > 0:
             assert pos.size(-1) == self.pos_dim
@@ -732,7 +723,7 @@ class SimpleAttention(nn.Module):
 
         return att_output, self.attn_weight
 
-    def _initialize(self):
+    def _reset_parameters(self):
         for param in self.linears.parameters():
             if param.ndim > 1:
                 xavier_uniform_(param, gain=self.xavier_init)
@@ -745,6 +736,44 @@ class SimpleAttention(nn.Module):
                     # param.data /= 2.0
             else:
                 constant_(param, 0)
+
+    def _get_norm(self, eps):
+        if self.attention_type in ['linear', 'galerkin', 'global']:
+            if self.norm_type == 'instance':
+                self.norm_K = self._get_instancenorm(self.d_k, self.n_head,
+                                                     eps=eps,
+                                                     affine=True)
+                self.norm_V = self._get_instancenorm(self.d_k, self.n_head,
+                                                     eps=eps,
+                                                     affine=True)
+            elif self.norm_type == 'layer':
+                self.norm_K = self._get_layernorm(self.d_k, self.n_head,
+                                                  eps=eps)
+                self.norm_V = self._get_layernorm(self.d_k, self.n_head,
+                                                  eps=eps)
+        else:
+            if self.norm_type == 'instance':
+                self.norm_K = self._get_instancenorm(self.d_k, self.n_head,
+                                                     eps=eps,
+                                                     affine=True)
+                self.norm_Q = self._get_instancenorm(self.d_k, self.n_head,
+                                                     eps=eps,
+                                                     affine=True)
+            elif self.norm_type == 'layer':
+                self.norm_K = self._get_layernorm(self.d_k, self.n_head,
+                                                  eps=eps)
+                self.norm_Q = self._get_layernorm(self.d_k, self.n_head,
+                                                  eps=eps)
+
+    @staticmethod
+    def _get_layernorm(normalized_dim, n_head, **kwargs):
+        return nn.ModuleList(
+            [copy.deepcopy(nn.LayerNorm(normalized_dim, **kwargs)) for _ in range(n_head)])
+
+    @staticmethod
+    def _get_instancenorm(normalized_dim, n_head, **kwargs):
+        return nn.ModuleList(
+            [copy.deepcopy(nn.InstanceNorm1d(normalized_dim, **kwargs)) for _ in range(n_head)])
 
 
 class FeedForward(nn.Module):
