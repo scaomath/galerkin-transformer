@@ -47,3 +47,30 @@ For real memory usage, use `{$ATTN_TYPE}` can be 'fourier', etc
 python ex2_memory_profile.py --batch-size 4 --dmodel 128 --attention-type {$ATTN_TYPE} --subsample-nodes 2 --subsample-attn 7 --num-iter 100
 ```
 then open up bash and use `nvidia-smi` to check the active Python process's memory.
+
+
+#### Only encoder profiling
+The bottleneck of Example 2 and 3 is actually the feature extractor, to profile encoder performance only:
+```bash
+python encoder_memory_profile.py --seq-len 8192 --batch-size 4 --dmodel 128 --head 1 --num-layers 4 --ndim 2 --num-iter 1000 --attention-type 'galerkin'
+```
+
+```bash
+python encoder_memory_profile.py --seq-len 8192 --batch-size 4 --dmodel 128 --head 1 --num-layers 4 --ndim 2 --num-iter 1000 --attention-type 'fourier'
+```
+
+
+```bash
+python encoder_memory_profile.py --seq-len 8192 --batch-size 4 --dmodel 128 --head 1 --num-layers 4 --ndim 2 --num-iter 1000 --attention-type 'softmax'
+```
+
+
+```bash
+python encoder_memory_profile.py --seq-len 8192 --batch-size 4 --dmodel 128 --head 1 --num-layers 4 --ndim 2 --num-iter 1000 --attention-type 'linear'
+```
+
+```bash
+python encoder_memory_profile.py --seq-len 8192 --batch-size 4 --dmodel 128 --head 1 --num-layers 4 --ndim 2 --num-iter 1 --attention-type 'softmax' 'fourier' 'linear' 'galerkin'
+```
+
+Galerkin-type attention has a huge edge over the linear attention for long sequences.

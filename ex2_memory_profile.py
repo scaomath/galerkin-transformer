@@ -7,11 +7,11 @@ DEBUG = False
 def main():
     parser = argparse.ArgumentParser(
         description='Memory profiling of various transformers for Example 2')
-    parser.add_argument('--batch-size', type=int, default=4, metavar='N',
-                        help='input batch size for profiling (default: 4)')
     parser.add_argument('--attention-type', nargs='+', metavar='attn_type', 
                         help='input the attention type for encoders to profile (possile: fourier (alias integral, local), galerkin (alias global), softmax (official PyTorch implementation), linear (standard Q(K^TV) with softmax))',
                         required=True)
+    parser.add_argument('--batch-size', type=int, default=4, metavar='N',
+                        help='input batch size for profiling (default: 4)')
     parser.add_argument('--subsample-nodes', type=int, default=3, metavar='subsample',
                         help='input fine grid sampling from 421x421 (default: 3 i.e., 141x141 grid)')
     parser.add_argument('--subsample-attn', type=int, default=10, metavar='subsample_attn',
@@ -38,12 +38,12 @@ def main():
     with open(os.path.join(current_path, r'config.yml')) as f:
         config = yaml.full_load(f)
     config = config['ex2_darcy']
+
     for arg in vars(args):
         if arg in config.keys():
             config[arg] = getattr(args, arg)
     config['downscaler_size'] = downsample
     config['upscaler_size'] = upsample
-    config['n_head'] = 1
     attn_types = args.attention_type
 
     for attn_type in attn_types:
@@ -59,8 +59,9 @@ def main():
         target = torch.randn(args.batch_size, n_grid, n_grid, 1).to(device)
         grid = torch.randn(args.batch_size, n_grid, n_grid, 2).to(device)
 
-        with profiler.profile(profile_memory=not args.no_memory, use_cuda=cuda,) as pf:
-            with tqdm(total=args.num_iter) as pbar:
+        with profiler.profile(profile_memory=not args.no_memory, 
+                              use_cuda=cuda,) as pf:
+            with tqdm(total=args.num_iter, disable=(args.num_iter<10)) as pbar:
                 for _ in range(args.num_iter):
                     y = model(node, None, pos, grid)
                     y = y['preds']

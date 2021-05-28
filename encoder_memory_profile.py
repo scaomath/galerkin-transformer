@@ -11,7 +11,7 @@ def main():
         description='Memory profiling of various encoder layers')
     parser.add_argument('--batch-size', type=int, default=4, metavar='N',
                         help='input batch size for profiling (default: 4)')
-    parser.add_argument('--attention-type', nargs='+', metavar='attn_type', 
+    parser.add_argument('--attention-type', nargs='+', metavar='attn_type',
                         help='input the attention type for encoders to profile (possile: fourier (alias integral, local), galerkin (alias global), softmax (official PyTorch implementation), linear (standard Q(K^TV) with softmax))',
                         required=True)
     parser.add_argument('--seq-len', type=int, default=1024, metavar='L',
@@ -39,32 +39,36 @@ def main():
         torch.cuda.empty_cache()
 
         encoder = FourierTransformerEncoderLayer(d_model=args.dmodel,
-                                                        n_head=args.head,
-                                                        attention_type=attn_type,
-                                                        dim_feedforward=None,
-                                                        layer_norm=args.reg_layernorm,
-                                                        attn_norm=not args.reg_layernorm,
-                                                        pos_dim=args.ndim,
-                                                        attn_weight=False,)
+                                                 n_head=args.head,
+                                                 attention_type=attn_type,
+                                                 dim_feedforward=None,
+                                                 layer_norm=args.reg_layernorm,
+                                                 attn_norm=not args.reg_layernorm,
+                                                 pos_dim=args.ndim,
+                                                 attn_weight=False,)
         encoder_layers = nn.ModuleList(
             [copy.deepcopy(encoder) for _ in range(args.num_layers)])
         encoder_layers = encoder_layers.to(device)
         print(
             f"\nModel name: {encoder.__name__}\t Number of params: {get_num_params(encoder_layers)}\n")
 
-        x = torch.randn(args.batch_size, args.seq_len, args.dmodel).to(device)
+        
         pos = torch.randn(args.batch_size, args.seq_len, args.ndim).to(device)
-        target = torch.randn(args.batch_size, args.seq_len, args.dmodel).to(device)
+        target = torch.randn(args.batch_size, args.seq_len,
+                             args.dmodel).to(device)
 
         with profiler.profile(profile_memory=True, use_cuda=cuda,) as pf:
-            for _ in range(args.num_iter):
-                for layer in encoder_layers:
-                    x = layer(x, pos)
-                loss = ((x-target)**2).mean()
-                loss.backward()
+            with tqdm(total=args.num_iter, disable=(args.num_iter<10)) as pbar:
+                for _ in range(args.num_iter):
+                    x = torch.randn(args.batch_size, args.seq_len, args.dmodel).to(device)
+                    for layer in encoder_layers:
+                        x = layer(x, pos)
+                    loss = ((x-target)**2).mean()
+                    loss.backward()
+                    pbar.update()
 
         sort_by = "self_cuda_memory_usage" if cuda else "self_cpu_memory_usage"
-        file_name = os.path.join(HOME, f'encoder_{attn_type}.txt')
+        file_name = os.path.join(HOME, f'encoders_pf_{attn_type}.txt')
         with open(file_name, 'w') as f:
             print(pf.key_averages().table(sort_by=sort_by,
                                         row_limit=300,
@@ -72,7 +76,8 @@ def main():
                                         ' profiling results',
                                         ), file=f)
         pf_result = ProfileResult(file_name, num_iters=args.num_iter, cuda=cuda)
-        pf_result.print_total_mem(['Self CUDA Mem'])
+        if cuda:
+            pf_result.print_total_mem(['Self CUDA Mem'])
         pf_result.print_total_time()
 
 

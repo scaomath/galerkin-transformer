@@ -22,6 +22,8 @@ def main():
                         help='input number of iteration of backpropagations for profiling (default: 1)')
     parser.add_argument('--reg-layernorm', action='store_true', default=False,
                         help='use the conventional layer normalization')
+    parser.add_argument('--no-memory', action='store_true', default=False,
+                        help='disables memory profiling')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA in profiling')
     args = parser.parse_args()
@@ -37,9 +39,9 @@ def main():
     with open(os.path.join(current_path, r'config.yml')) as f:
         config = yaml.full_load(f)
     config = config['ex3_darcy_inv']
-    config['layer_norm'] = args.reg_layernorm
-    config['attn_norm'] = not args.reg_layernorm
-    config['n_hidden'] = args.dmodel
+    for arg in vars(args):
+        if arg in config.keys():
+            config[arg] = getattr(args, arg)
     config['downscaler_size'] = downsample
     config['upscaler_size'] = ((n_grid_c, n_grid_c), (n_grid_c, n_grid_c))
     attn_types = args.attention_type
@@ -58,11 +60,13 @@ def main():
         grid = torch.randn(args.batch_size, n_grid_c, n_grid_c, 2).to(device)
 
         with profiler.profile(profile_memory=True, use_cuda=cuda,) as pf:
-            for _ in range(args.num_iter):
-                y = model(node, None, pos, grid)
-                y = y['preds']
-                loss = ((y-target)**2).mean()
-                loss.backward()
+            with tqdm(total=args.num_iter, disable=(args.num_iter<10)) as pbar:
+                for _ in range(args.num_iter):
+                    y = model(node, None, pos, grid)
+                    y = y['preds']
+                    loss = ((y-target)**2).mean()
+                    loss.backward()
+                    pbar.update()
 
         sort_by = "self_cuda_memory_usage" if cuda else "self_cpu_memory_usage"
         file_name = os.path.join(HOME, f'ex2_{attn_type}.txt')

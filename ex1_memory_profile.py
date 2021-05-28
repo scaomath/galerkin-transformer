@@ -5,6 +5,8 @@ DEBUG = False
 
 
 def main():
+
+    # Training settings
     parser = argparse.ArgumentParser(
         description='Memory profiling of various transformers for Example 1')
     parser.add_argument('--batch-size', type=int, default=4, metavar='N',
@@ -34,7 +36,6 @@ def main():
     for arg in vars(args):
         if arg in config.keys():
             config[arg] = getattr(args, arg)
-    config['n_head'] = 1
     attn_types = args.attention_type
 
     for attn_type in attn_types:
@@ -49,8 +50,8 @@ def main():
         pos = torch.randn(args.batch_size, args.seq_len, 1).to(device)
         target = torch.randn(args.batch_size, args.seq_len, 1).to(device)
 
-        with profiler.profile(profile_memory=True, use_cuda=cuda,) as pf:
-            with tqdm(total=args.num_iter) as pbar:
+        with profiler.profile(profile_memory=not args.no_memory, use_cuda=cuda,) as pf:
+            with tqdm(total=args.num_iter, disable=(args.num_iter<10)) as pbar:
                 for _ in range(args.num_iter):
                     y = model(node, None, pos)
                     y = y['preds']
