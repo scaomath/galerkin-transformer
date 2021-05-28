@@ -899,17 +899,20 @@ class FourierTransformer2D(nn.Module):
 
     def cuda(self, device=None):
         self = super().cuda(device)
-        self.normalizer = self.normalizer.cuda(device)
+        if self.normalizer:
+            self.normalizer = self.normalizer.cuda(device)
         return self
 
     def cpu(self):
         self = super().cpu()
-        self.normalizer = self.normalizer.cpu()
+        if self.normalizer:
+            self.normalizer = self.normalizer.cpu()
         return self
 
     def to(self, *args, **kwargs):
         self = super().to(*args, **kwargs)
-        self.normalizer = self.normalizer.to(*args, **kwargs)
+        if self.normalizer:
+            self.normalizer = self.normalizer.to(*args, **kwargs)
         return self
 
     @staticmethod

@@ -93,22 +93,18 @@ Using CUDA, Fourier Transformer features an over 40% reduction in `self_cuda_mem
 
 Example 1 memory profile of a model with 96 hidden dimension with an input sequence length 8192. Compare the memory usage of the Fourier transformer with the one with softmax
 ```bash
-python ex1_memory_profile.py --batch-size 2 --seq-len 8192 --dmodel 96 --attention-type 'softmax' 'fourier'
+python ex1_memory_profile.py --batch-size 4 --seq-len 8192 --dmodel 96 --attention-type 'softmax' 'fourier'
 ```
 Compare the backpropagation time usage of the Galerkin transformer versus the same net, but with Galerkin-type simple attention replaced by the standard linearized attention. 
 ```bash
-python ex1_memory_profile.py --batch-size 2 --seq-len 8192 --dmodel 96 --num-iter 100 --attention-type 'linear' 'galerkin'
-```
-
-Example 2 memory profile of a 2D model with 64 hidden dimension, using the default `141x141` fine grid, `43x43` coarse grid set up.
-```bash
-python ex2_memory_profile.py --batch-size 2 --dmodel 64 --attention-type 'softmax' 'fourier' 'linear' 'galerkin'
+python ex1_memory_profile.py --batch-size 4 --seq-len 8192 --dmodel 96 --num-iter 10 --attention-type 'linear' 'galerkin'
 ```
 
 Encoder layer wrapper profiling: profile a wrapper with 10 layers of encoder in a model for operators defined for functions whose domain is isomorphic to a 2D Euclidean space.
 ```bash
 python encoder_memory_profile.py --batch-size 4 --dmodel 96 --num-layers 10 -ndim 2
 ```
+Please refer to [`training.md`](./training.md) for more detailed profiling in each example.
 
 
 # License

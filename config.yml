@@ -54,7 +54,7 @@ ex2_darcy:
   symmetric_init: False
   layer_norm: False
   attn_norm: True
-  norm_eps: 1e-7
+  norm_eps: 0.0000001
   batch_norm: False
   return_attn_weight: False
   return_latent: False
