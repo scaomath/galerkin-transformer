@@ -32,42 +32,13 @@ except ImportError as e:
     print('Please install Plotly for showing mesh and solutions.')
 
 current_path = os.path.dirname(os.path.abspath(__file__))
-HOME = os.path.dirname(current_path)
-MODEL_PATH = os.path.join(HOME, 'models')
-DATA_PATH = os.path.join(HOME, 'data')
+SRC_ROOT = os.path.dirname(current_path)
+MODEL_PATH = default(os.environ.get('MODEL_PATH'), os.path.join(SRC_ROOT, 'models'))
+DATA_PATH = default(os.environ.get('DATA_PATH'), os.path.join(SRC_ROOT, 'data'))
 EPOCH_SCHEDULERS = ['ReduceLROnPlateau', 'StepLR', 'MultiplicativeLR',
                     'MultiStepLR', 'ExponentialLR', 'LambdaLR']
-
-
-# def get_seed(s, printout=True):
-#     # rd.seed(s)
-#     os.environ['PYTHONHASHSEED'] = str(s)
-#     np.random.seed(s)
-#     # Torch
-#     torch.manual_seed(s)
-#     torch.cuda.manual_seed(s)
-#     torch.backends.cudnn.deterministic = True
-#     torch.backends.cudnn.benchmark = False
-#     if torch.cuda.is_available():
-#         torch.cuda.manual_seed_all(s)
-
-#     message = f'''
-#     os.environ['PYTHONHASHSEED'] = str({s})
-#     numpy.random.seed({s})
-#     torch.manual_seed({s})
-#     torch.cuda.manual_seed({s})
-#     torch.backends.cudnn.deterministic = True
-#     torch.backends.cudnn.benchmark = False
-#     if torch.cuda.is_available():
-#         torch.cuda.manual_seed_all({s})
-#     '''
-#     if printout:
-#         print("\n")
-#         print(f"The following code snippets have been run.")
-#         print("="*50)
-#         print(message)
-#         print("="*50)
-
+PI = math.pi
+SEED = default(os.environ.get('SEED'), 1127802)
 
 def clones(module, N):
     '''
@@ -462,6 +433,7 @@ def showresult(result=dict(), title=None, result_type='convergence',
         showsolution(grid, elem, uh, template='seaborn',
                      width=600, height=500,)
 
+
 def get_model_name(model='burgers',
                    num_ft_layers=4,
                    n_hidden=96,
@@ -469,14 +441,15 @@ def get_model_name(model='burgers',
                    layer_norm=True,
                    grid_size=512,
                    inverse_problem=False,
-                   additional_str: str='',
+                   additional_str: str = '',
                    ):
 
     model_name = 'burgers_' if model == 'burgers' else 'darcy_'
-    if inverse_problem: model_name += 'inv_'
+    if inverse_problem:
+        model_name += 'inv_'
     model_name += str(grid_size)+'_'
     if attention_type == 'fourier':
-        attn_str = f'{num_ft_layers}ft_' 
+        attn_str = f'{num_ft_layers}ft_'
     elif attention_type == 'galerkin':
         attn_str = f'{num_ft_layers}gt_'
     elif attention_type == 'linear':
@@ -489,7 +462,8 @@ def get_model_name(model='burgers',
     model_name += f'{n_hidden}d_'
     ln_str = 'ln_' if layer_norm else 'qkv_'
     model_name += ln_str
-    if additional_str: model_name += additional_str
+    if additional_str:
+        model_name += additional_str
 
     _suffix = str(date.today())
     if model_name[-1] == '_':
@@ -499,6 +473,7 @@ def get_model_name(model='burgers',
         result_name = model_name + '_' + _suffix + '.pkl'
         model_name += '_' + _suffix + '.pt'
     return model_name, result_name
+
 
 def get_args_1d():
     parser = argparse.ArgumentParser(description='Example 1: Burgers equation')
@@ -539,13 +514,18 @@ def get_args_2d(subsample_nodes=3,
                 subsample_attn=10,
                 gamma=0.5,
                 noise=0.0,
-                inverse=False):
+                ffn_dropout=0.1,
+                encoder_dropout=0.05,
+                decoder_dropout=0.0,
+                dropout=0.0,
+                inverse=False,
+                **kwargs):
     if inverse:
         parser = argparse.ArgumentParser(
             description='Example 3: inverse coefficient identification problem for Darcy interface flow')
     else:
         parser = argparse.ArgumentParser(
-        description='Example 2: Darcy interface flow')
+            description='Example 2: Darcy interface flow')
 
     n_grid = int(((421 - 1)/subsample_nodes) + 1)
     n_grid_c = int(((421 - 1)/subsample_attn) + 1)
@@ -566,14 +546,14 @@ def get_args_2d(subsample_nodes=3,
                         help='input Xavier initialization strength for Q,K,V weights (default: 0.01)')
     parser.add_argument('--diag-weight', type=float, default=1e-2, metavar='diag_weight',
                         help='input diagonal weight initialization strength for Q,K,V weights (default: 0.01)')
-    parser.add_argument('--ffn-dropout', type=float, default=0.05, metavar='ffn_dropout',
-                        help='dropout for the FFN in attention (default: 0.05)')
-    parser.add_argument('--encoder-dropout', type=float, default=0.05, metavar='encoder_dropout',
-                        help='dropout after the scaled dot-product in attention (default: 0.05)')
-    parser.add_argument('--dropout', type=float, default=0.0, metavar='dropout',
-                        help='dropout before the decoder layers (default: 0.0)')
-    parser.add_argument('--decoder-dropout', type=float, default=0.0, metavar='decoder_dropout',
-                        help='dropout in the decoder layers (default: 0.0)')
+    parser.add_argument('--ffn-dropout', type=float, default=ffn_dropout, metavar='ffn_dropout',
+                        help=f'dropout for the FFN in attention (default: {ffn_dropout})')
+    parser.add_argument('--encoder-dropout', type=float, default=encoder_dropout, metavar='encoder_dropout',
+                        help=f'dropout after the scaled dot-product in attention (default: {encoder_dropout})')
+    parser.add_argument('--dropout', type=float, default=dropout, metavar='dropout',
+                        help=f'dropout before the decoder layers (default: {dropout})')
+    parser.add_argument('--decoder-dropout', type=float, default=decoder_dropout, metavar='decoder_dropout',
+                        help=f'dropout in the decoder layers (default: {decoder_dropout})')
     parser.add_argument('--reg-layernorm', action='store_true', default=False,
                         help='use the conventional layer normalization')
     parser.add_argument('--epochs', type=int, default=100, metavar='N',
@@ -587,6 +567,7 @@ def get_args_2d(subsample_nodes=3,
     parser.add_argument('--seed', type=int, default=SEED, metavar='Seed',
                         help='random seed (default: 1127802)')
     return parser.parse_args()
+
 
 def train_batch_burgers(model, loss_func, data, optimizer, lr_scheduler, device, grad_clip=0.999):
     optimizer.zero_grad()
@@ -625,6 +606,7 @@ def train_batch_burgers(model, loss_func, data, optimizer, lr_scheduler, device,
 
     return (loss.item(), reg.item(), ortho.item()), u_pred, up_pred
 
+
 def validate_epoch_burgers(model, metric_func, valid_loader, device):
     model.eval()
     metric_val = []
@@ -648,6 +630,7 @@ def validate_epoch_burgers(model, metric_func, valid_loader, device):
                 metric_val.append(metric)
 
     return dict(metric=np.mean(metric_val, axis=0))
+
 
 def train_batch_darcy(model, loss_func, data, optimizer, lr_scheduler, device, grad_clip=0.99):
     optimizer.zero_grad()
@@ -682,6 +665,7 @@ def train_batch_darcy(model, loss_func, data, optimizer, lr_scheduler, device, g
 
     return (loss.item(), reg.item()), u_pred, up_pred
 
+
 def validate_epoch_darcy(model, metric_func, valid_loader, device):
     model.eval()
     metric_val = []
@@ -704,6 +688,7 @@ def validate_epoch_darcy(model, metric_func, valid_loader, device):
                 metric_val.append(metric)
 
     return dict(metric=np.mean(metric_val, axis=0))
+
 
 def run_train(model, loss_func, metric_func,
               train_loader, valid_loader,

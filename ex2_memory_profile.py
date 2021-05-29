@@ -70,7 +70,7 @@ def main():
                     pbar.update()
 
         sort_by = "self_cuda_memory_usage" if cuda else "self_cpu_memory_usage"
-        file_name = os.path.join(HOME, f'ex2_{attn_type}.txt')
+        file_name = os.path.join(SRC_ROOT, f'ex2_{attn_type}.txt')
         with open(file_name, 'w') as f:
             print(pf.key_averages().table(sort_by=sort_by,
                                         row_limit=300,

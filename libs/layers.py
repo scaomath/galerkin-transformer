@@ -11,13 +11,6 @@ import copy
 from functools import partial
 
 
-def default(value, d):
-    '''
-    helper taken from https://github.com/lucidrains/linear-attention-transformer
-    '''
-    return d if value is None else value
-
-
 class Identity(nn.Module):
     '''
     a placeholder layer similar to tensorflow.no_op():

@@ -27,35 +27,53 @@ To install requirements:
 pip install -r requirements.txt
 ```
 
+```sh
+seaborn==0.11.1
+torchinfo==0.0.8
+numpy==1.20.2
+torch==1.8.0
+plotly==4.14.3
+scipy==1.6.2
+psutil==5.8.0
+matplotlib==3.3.4
+tqdm==4.56.0
+PyYAML==5.4.1
+```
+
+If interactive mode is to be used, please install
+```
+jupyterthemes==0.20.0
+ipython==7.23.1
+```
+
 # Data
-The data is courtesy of [Zongyi Li (Caltech)](https://github.com/zongyi-li/fourier_neural_operator)  under the MIT license. Download the data from [here](https://drive.google.com/drive/folders/1UnbQh2WWc6knEHbLn-ZaXrKUZhp7pjt-?usp=sharing), and unzip the Burgers and Darcy flow problem files to the `./data` for 
+The data is courtesy of [Zongyi Li (Caltech)](https://github.com/zongyi-li/fourier_neural_operator)  under the MIT license. Download the following data from [here](https://drive.google.com/drive/folders/1UnbQh2WWc6knEHbLn-ZaXrKUZhp7pjt-?usp=sharing):
 >`burgers_data_R10.mat`
 <br>`piececonst_r421_N1024_smooth1.mat`
 <br>`piececonst_r421_N1024_smooth2.mat`.
 
-The code has a semi env variable `DATA_PATH` set in [`utils_ft.py`](./libs/utils_ft.py).
+The repo has a semi env variable `$DATA_PATH` set in [`utils_ft.py`](./libs/utils_ft.py), if you have a global system environ variable name `$DATA_PATH`, then please put the data in that folder. Otherwise, please unzip the Burgers and Darcy flow problem files to the `./data` folder. 
 
 # Examples
-All examples are learning PDE-related operators. The setting can be found in [`config.yml`](./config.yml). By default the evaluation is performed on the last 100 samples in the test dataset. All trainers are using the [`1cycle` scheduler](https://arxiv.org/abs/1708.07120) in [PyTorch](https://pytorch.org/docs/master/generated/torch.optim.lr_scheduler.OneCycleLR.html) for 100 epochs. Every example has a `--seed {$SEED}` argument and the default seed is 1127802. Since [`nn.functional.interpolate`](https://pytorch.org/docs/master/generated/torch.nn.functional.interpolate.html) is used in 2D examples, a fixed seed may still yield different results each training cycle on GPU according to PyTorch documents, but we have verified that the variance is negligible. Some example set-ups are as follows, to fully reproducing our result, please refer to [`training.md`](./training.md) for all the possible args.
+All examples are learning PDE-related operators. The setting can be found in [`config.yml`](./config.yml). By default the evaluation is performed on the last 100 samples in the test dataset like the code in [FNO repo](https://github.com/zongyi-li/fourier_neural_operator). All trainers are using the [`1cycle` scheduler](https://arxiv.org/abs/1708.07120) in [PyTorch](https://pytorch.org/docs/master/generated/torch.optim.lr_scheduler.OneCycleLR.html) for 100 epochs. Every example has a `--seed {$SEED}` argument and the default seed is 1127802. Again if you have a system wide env variable named `$SEED`, the code will use that seed instead. 
+
+### A caveat for Darcy problems
+Since [`nn.functional.interpolate`](https://pytorch.org/docs/master/generated/torch.nn.functional.interpolate.html) is used in Darcy examples, a fixed seed may still yield different results each training cycle on GPU according to PyTorch documents, but we have verified that the variance is negligible. Some example set-ups are as follows, to fully reproducing our result, please refer to [`training.md`](./training.md) for all the possible args.
 
 ## Example 1: Burgers equation
 The baseline benchmark [`ex1_burgers.py`](./ex1_burgers.py): evaluation relative error is about `1e-3` with a simple pointwise forward expansion feature extractor. The input is the initial condition of a viscous Burgers' equation on a discrete grid, the output is an approximation to the solution marched to time $1$. The initial data are generating using a GRF and the data in the validation set are not in the train set.
 
-Default benchmark on a 2048 grid using a Fourier Transformer, with 4 Fourier-type attention layers as the encoder and 2 spectral convolution layers from [Li et al 2020](https://github.com/zongyi-li/fourier_neural_operator) as the decoder:
+Default benchmark on a 2048 grid using a Fourier Transformer, with 4 Fourier-type attention encoder layers as the encoder and 2 spectral convolution layers from [Li et al 2020](https://github.com/zongyi-li/fourier_neural_operator) as the decoder (to reduce the overfit we decrease the `dmodel` of the spectral conv from the original 64 to 48):
 ```bash
 python ex1_burgers.py
 ```
-No subsampling (8192 grid), Galerkin-type attention, adding a diagonal matrix to the Xavier initializations of the `W^Q, W^K, W^V` matrices (about 30%-1000% better than those without depending on other settings).
+If we want to try no subsampling (8192 grid), it is recommended to use the Galerkin-type attention. Note that we add a diagonal matrix to the Xavier initializations of the `W^Q, W^K, W^V` matrices (about 30%-1000% better than those without depending on other settings).
 ```bash
-python ex1_burgers.py --subsample 1\
-                      --attention-type 'galerkin'\
-                      --xavier-init 0.01 --diag-weight 0.01
+python ex1_burgers.py --subsample 1 --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01
 ```
-Using standard softmax normalization `Softmax(QK^T/sqrt{d})V`, conventional layer normalization application scheme in attention layers
+Using standard softmax normalization `Softmax(QK^T/sqrt{d})V`, conventional layer normalization application scheme, default Xavier initialization.
 ```bash
-python ex1_burgers.py --attention-type 'softmax'\
-                      --reg-layernorm\
-                      --xavier-init 1.0 --diag-weight 0.0
+python ex1_burgers.py --attention-type 'softmax' --reg-layernorm --xavier-init 1.0 --diag-weight 0.0
 ```
 
 ## Example 2: Interface Darcy flow
@@ -67,24 +85,18 @@ python ex2_darcy.py
 ```
 For a smaller memory GPU or CPU, please use the 85x85 grid fine, 29x29 coarse grid setting:
 ```bash
-python ex2_darcy.py --subsample-attn 15\
-                    --subsample-nodes 5\
-                    --attention-type 'galerkin'\
-                    --xavier-init 0.01 --diag-weight 0.01
+python ex2_darcy.py --subsample-attn 15 --subsample-nodes 5 --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01
 ```
 ## Example 3: Inverse interface coefficient identification for Darcy flow
 The baseline benchmark [`ex3_darcy_inv.py`](./ex3_darcy_inv.py): an inverse coefficient identification problem based on the same dataset used in Example 2. However, in this example, the input and the target are reversed, i.e., the target is the interface coefficient with a random geometry, and the input is the finite difference approximation to the PDE problem, together with an optional noise added to the input to simulate measurement errors. Due to a limit of interpolation operator having no approximation property to nonsmooth functions, the coefficient cannot be resolved at the resolution, the target is sampled at a lower resolution than the input. Evaluation relative error is about `1.5e-2` to `2e-2` without noise, `3e-2` with 1% noise, and `7e-2` to `8e-2` with 10% noise. The main source of the error stems from the magnitudes of the coefficient, the attention-based learner can capture the random interface geometry pretty well.
 
-Default benchmark is on a 211x211 fine grid input and a 71x71 coarse grid coefficient output. The model is the Galerkin Transformer with 6 stacked Galerkin-type attention layers (`d_model=192`, `nhead=4`) with a simple pointwise feed-forward neural network to map the attention output back the desired dimension. There is a small dropout in every key components of the network (`5e-2`). The noise is added to the normalized input, so 0.01 noise means 1%, and 0.1 means 10%.
+Default benchmark is on a 211x211 fine grid input and a 71x71 coarse grid coefficient output. The model is the Galerkin Transformer with 6 stacked Galerkin-type attention layers (`d_model=192`, `nhead=4`) with a simple pointwise feed-forward neural network to map the attention output back the desired dimension. There is a small dropout in every key components of the network (`5e-2`). The noise is added to the normalized input, so 0.01 noise means 1%, and 0.1 means 10%. By default there is 1% noise added.
 ```bash
 python ex3_darcy_inv.py --noise 0.01
 ```
 For a smaller memory GPU, please use the 141x141 grid fine, 36x36 coarse grid, and avoid using the local attention `fourier` or `softmax` in the `--attention-type` switch:
 ```bash
-python ex3_darcy_inv.py --subsample-attn 12\
-                        --subsample-nodes 3\
-                        --attention-type 'galerkin'\
-                        --xavier-init 0.01 --diag-weight 0.01
+python ex3_darcy_inv.py --subsample-attn 12 --subsample-nodes 3 --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01
 ```
 
 # Memory and speed profiling using `autograd.profiler`

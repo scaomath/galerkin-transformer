@@ -19,8 +19,8 @@ from torch.nn.init import constant_, xavier_uniform_
 from torchinfo import summary
 
 current_path = os.path.dirname(os.path.abspath(__file__))
-HOME = os.path.dirname(current_path)
-sys.path.append(HOME)
+SRC_ROOT = os.path.dirname(current_path)
+sys.path.append(SRC_ROOT)
 
 ADDITIONAL_ATTR = ['normalizer', 'raw_laplacian', 'return_latent',
                    'residual_type', 'norm_type', 'boundary_condition',

@@ -81,6 +81,11 @@ ex2_darcy:
 
 
 ex3_darcy_inv:
+  subsample_nodes: 2
+  subsample_attn: 6
+  gamma: 0.0
+  noise: 0.01
+  inverse: True
   node_feats: 1
   pos_dim: 2
   n_targets: 1

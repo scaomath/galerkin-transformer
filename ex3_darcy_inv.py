@@ -3,9 +3,12 @@ SEED = 1127802
 DEBUG = False
 
 def main():
-    
-    args = get_args_2d(subsample_nodes=2, subsample_attn=6, 
-                       inverse=True, gamma=0.0, noise=0.01)
+    with open(r'./config.yml') as f:
+        config = yaml.full_load(f)
+    test_name = os.path.basename(__file__).split('.')[0]
+    config = config[test_name]
+
+    args = get_args_2d(**config)
     cuda = not args.no_cuda and torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     kwargs = {'pin_memory': True} if cuda else {}
@@ -69,10 +72,7 @@ def main():
         ah_plot = ax.imshow(ah.reshape(n_grid_c, n_grid_c), cmap='RdBu')
         fig.colorbar(ah_plot, ax=ax, anchor=(0, 0.3), shrink=0.8)
 
-    with open(r'./config.yml') as f:
-        config = yaml.full_load(f)
-    test_name = os.path.basename(__file__).split('.')[0]
-    config = config[test_name]
+    
     config['upscaler_size'] = (n_grid_c, n_grid_c), (n_grid_c, n_grid_c)
     config['normalizer'] = train_dataset.normalizer_y.to(device)
     config['downscaler_size'] = downsample
@@ -107,7 +107,7 @@ def main():
     scheduler = OneCycleLR(optimizer, max_lr=lr, div_factor=1e4, final_div_factor=1e4,
                            steps_per_epoch=len(train_loader), epochs=epochs)
 
-    loss_func = WeightedL2Loss2d(regularizer=False, h=h, gamma=0)
+    loss_func = WeightedL2Loss2d(regularizer=False, h=h, gamma=0.0)
 
     metric_func = WeightedL2Loss2d(regularizer=False, h=h)
 
@@ -122,6 +122,11 @@ def main():
                        model_name=model_name,
                        result_name=result_name,
                        device=device)
+
+    model.load_state_dict(torch.load(os.path.join(MODEL_PATH, model_name)))
+    model.eval()
+    val_metric = validate_epoch_darcy(model, metric_func, valid_loader, device)
+    print(f"\nBest model's validation metric in this run: {val_metric}")
 
     plt.figure(1)
     loss_train = result['loss_train']

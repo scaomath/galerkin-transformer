@@ -50,8 +50,6 @@ if is_interactive():
         print("Package not found.")
 
 #########################################################################
-PI = math.pi
-SEED = 1127802 
 
 def get_size(bytes, suffix='B'):
     ''' 
@@ -252,7 +250,11 @@ def get_date():
     return today.strftime("%b-%d-%Y")
 
 def argmax(lst):
-  return lst.index(max(lst))
+    '''
+    Taken from https://stackoverflow.com/a/31105620/622119
+    License: CC BY-SA 3.0.
+    '''
+    return lst.index(max(lst))
 
 # def get_num_params(model):
 #     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
@@ -260,12 +262,22 @@ def argmax(lst):
 #     return params
 
 def get_num_params(model):
+    '''
+    a single entry in cfloat and cdouble count as two parameters
+    see https://github.com/pytorch/pytorch/issues/57518
+    '''
     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
     num_params = 0
     for p in model_parameters:
         # num_params += np.prod(p.size()+(2,) if p.is_complex() else p.size())
         num_params += p.numel() * (1 + p.is_complex())
     return num_params
+
+def default(value, d):
+    '''
+    helper taken from https://github.com/lucidrains/linear-attention-transformer
+    '''
+    return d if value is None else value
 
 def save_pickle(var, save_path):
     with open(save_path, 'wb') as f:
