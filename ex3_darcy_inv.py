@@ -1,50 +1,11 @@
 from libs import *
-from ex2_darcy import train_batch_darcy, validate_epoch_darcy
-import argparse
-from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import OneCycleLR
-
 SEED = 1127802
 DEBUG = False
 
 def main():
-
-    # Training settings
-    parser = argparse.ArgumentParser(
-        description='Example 3: inverse coefficient identification problem for Darcy interface flow')
-    parser.add_argument('--subsample-nodes', type=int, default=2, metavar='subsample',
-                        help='input fine grid sampling from 421x421 (default: 3 i.e., 211x211 grid)')
-    parser.add_argument('--subsample-attn', type=int, default=6, metavar='subsample_attn',
-                        help='input coarse grid sampling from 421x421 (default: 6 i.e., 71x71 grid)')
-    parser.add_argument('--batch-size', type=int, default=4, metavar='N',
-                        help='input batch size for training (default: 4)')
-    parser.add_argument('--val-batch-size', type=int, default=4, metavar='N',
-                        help='input batch size for validation (default: 4)')
-    parser.add_argument('--attention-type', type=str, default='galerkin', metavar='attn_type',
-                        help='input attention type for encoders (possile: fourier (alias integral, local), galerkin (alias global), softmax (official PyTorch implementation), linear (standard Q(K^TV) with softmax), default: galerkin)')
-    parser.add_argument('--noise', type=float, default=0.0, metavar='noise',
-                        help='strength of noise imposed (default: 0.0)')
-    parser.add_argument('--xavier-init', type=float, default=1e-2, metavar='xavier_init',
-                        help='input Xavier initialization strength for Q,K,V weights (default: 0.01)')
-    parser.add_argument('--diag-weight', type=float, default=1e-2, metavar='diag_weight',
-                        help='input diagonal weight initialization strength for Q,K,V weights (default: 0.01)')
-    parser.add_argument('--ffn-dropout', type=float, default=0.05, metavar='ffn_dropout',
-                        help='dropout for the FFN in attention (default: 0.0)')
-    parser.add_argument('--encoder-dropout', type=float, default=0.05, metavar='encoder_dropout',
-                        help='dropout after the scaled dot-product in attention (default: 0.0)')
-    parser.add_argument('--decoder-dropout', type=float, default=0.05, metavar='decoder_dropout',
-                        help='dropout for the decoder layers (default: 0.0)')
-    parser.add_argument('--reg-layernorm', action='store_true', default=False,
-                        help='use the conventional layer normalization')
-    parser.add_argument('--epochs', type=int, default=100, metavar='N',
-                        help='number of epochs to train (default: 100)')
-    parser.add_argument('--lr', type=float, default=1e-3, metavar='LR',
-                        help='max learning rate (default: 0.001)')
-    parser.add_argument('--no-cuda', action='store_true', default=False,
-                        help='disables CUDA training')
-    parser.add_argument('--seed', type=int, default=SEED, metavar='Seed',
-                        help='random seed (default: 1127802)')
-    args = parser.parse_args()
+    
+    args = get_args_2d(subsample_nodes=2, subsample_attn=6, 
+                       inverse=True, gamma=0.0, noise=0.01)
     cuda = not args.no_cuda and torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     kwargs = {'pin_memory': True} if cuda else {}

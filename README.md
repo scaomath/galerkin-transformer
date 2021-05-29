@@ -4,7 +4,7 @@
 [![Pytorch 1.8](https://img.shields.io/badge/pytorch-1.8-blue.svg)](https://pytorch.org/)
 
 TL;DR:
-The new attention operator is `(QK^T)V` or `Q(K^TV)`, whichever doing matmul gets the layer normalization, i.e., `Q, K` get layer normalized in local attention, as for `K, V` in global attention. No softmax, no layer normalization is applied afterward. This is called a scaling-preserving simple attention. Combining with proper feature extractor and decoder, it is extremely powerful in learning PDE-related operators (energy decay, inverse coefficient identification).
+The new attention operator is `(QK^T)V` or `Q(K^TV)`, whichever doing matmul gets the layer normalization, i.e., `Q, K` get layer normalized in local attention, as for `K, V` in global attention. No softmax, no layer normalization is applied afterward. This is called a scale-preserving simple attention. Combining with proper feature extractor and decoder, it is extremely powerful in learning PDE-related operators (energy decay, inverse coefficient identification).
 
 
 For details please refer to:
@@ -36,7 +36,7 @@ The data is courtesy of [Zongyi Li (Caltech)](https://github.com/zongyi-li/fouri
 The code has a semi env variable `DATA_PATH` set in [`utils_ft.py`](./libs/utils_ft.py).
 
 # Examples
-All examples are learning PDE-related operators. The setting can be found in [`config.yml`](./config.yml). By default the evaluation is performed on the last 100 samples in the test dataset. All trainers are using the [`1cycle` scheduler](https://arxiv.org/abs/1708.07120) in [PyTorch](https://pytorch.org/docs/master/generated/torch.optim.lr_scheduler.OneCycleLR.html) for 100 epochs. Every example has a `--seed {$SEED}` argument and the default seed is 1127802. Since [`nn.functional.interpolate`](https://pytorch.org/docs/master/generated/torch.nn.functional.interpolate.html) is used in 2D examples, a fixed seed may still yield different results each training cycle on GPU according to PyTorch documents, but we have verified that the variance is negligible. Some example set-ups are as follows, to fully reproducing our result, please refer to [`training.md`](./training.md).
+All examples are learning PDE-related operators. The setting can be found in [`config.yml`](./config.yml). By default the evaluation is performed on the last 100 samples in the test dataset. All trainers are using the [`1cycle` scheduler](https://arxiv.org/abs/1708.07120) in [PyTorch](https://pytorch.org/docs/master/generated/torch.optim.lr_scheduler.OneCycleLR.html) for 100 epochs. Every example has a `--seed {$SEED}` argument and the default seed is 1127802. Since [`nn.functional.interpolate`](https://pytorch.org/docs/master/generated/torch.nn.functional.interpolate.html) is used in 2D examples, a fixed seed may still yield different results each training cycle on GPU according to PyTorch documents, but we have verified that the variance is negligible. Some example set-ups are as follows, to fully reproducing our result, please refer to [`training.md`](./training.md) for all the possible args.
 
 ## Example 1: Burgers equation
 The baseline benchmark [`ex1_burgers.py`](./ex1_burgers.py): evaluation relative error is about `1e-3` with a simple pointwise forward expansion feature extractor. The input is the initial condition of a viscous Burgers' equation on a discrete grid, the output is an approximation to the solution marched to time $1$. The initial data are generating using a GRF and the data in the validation set are not in the train set.
@@ -63,14 +63,13 @@ The baseline benchmark [`ex2_darcy.py`](./ex2_darcy.py): evaluation relative err
 
 Default benchmark on a 141x141 grid using the Galerkin Transformer, 6 Galerkin-type attention layers with `d_model=128` and `nhead=4` as the encoder, and 2 spectral conv layers from [Li et al 2020](https://github.com/zongyi-li/fourier_neural_operator) as the decoder. There is a small dropout `5e-2` in the attention layer as well as in the feature extraction layer:
 ```bash
-python ex2_darcy.py --reg-layernorm
+python ex2_darcy.py
 ```
-For a smaller memory GPU or CPU, please use the 85x85 grid fine, 29x29 coarse grid example:
+For a smaller memory GPU or CPU, please use the 85x85 grid fine, 29x29 coarse grid setting:
 ```bash
 python ex2_darcy.py --subsample-attn 15\
                     --subsample-nodes 5\
                     --attention-type 'galerkin'\
-                    --reg-layernorm\
                     --xavier-init 0.01 --diag-weight 0.01
 ```
 ## Example 3: Inverse interface coefficient identification for Darcy flow

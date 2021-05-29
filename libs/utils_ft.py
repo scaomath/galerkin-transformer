@@ -1,3 +1,4 @@
+import argparse
 import math
 import os
 import sys
@@ -14,6 +15,7 @@ from scipy.sparse import csr_matrix, diags
 from scipy.sparse import hstack as sparse_hstack
 from torch import nn
 from torch.optim.lr_scheduler import OneCycleLR, _LRScheduler
+from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
 try:
@@ -497,6 +499,94 @@ def get_model_name(model='burgers',
         result_name = model_name + '_' + _suffix + '.pkl'
         model_name += '_' + _suffix + '.pt'
     return model_name, result_name
+
+def get_args_1d():
+    parser = argparse.ArgumentParser(description='Example 1: Burgers equation')
+    parser.add_argument('--subsample', type=int, default=4, metavar='subsample',
+                        help='input sampling from 8192 (default: 4 i.e., 2048 grid)')
+    parser.add_argument('--batch-size', type=int, default=8, metavar='N',
+                        help='input batch size for training (default: 8)')
+    parser.add_argument('--val-batch-size', type=int, default=4, metavar='N',
+                        help='input batch size for validation (default: 4)')
+    parser.add_argument('--attention-type', type=str, default='fourier', metavar='attn_type',
+                        help='input attention type for encoders (possile: fourier (alias integral, local), galerkin (alias global), softmax (official PyTorch implementation), linear (standard Q(K^TV) with softmax), default: fourier)')
+    parser.add_argument('--xavier-init', type=float, default=0.01, metavar='xavier_init',
+                        help='input Xavier initialization strength for Q,K,V weights (default: 0.01)')
+    parser.add_argument('--diag-weight', type=float, default=0.01, metavar='diag_weight',
+                        help='input diagonal weight initialization strength for Q,K,V weights (default: 0.01)')
+    parser.add_argument('--ffn-dropout', type=float, default=0.0, metavar='ffn_dropout',
+                        help='dropout for the FFN in attention (default: 0.0)')
+    parser.add_argument('--encoder-dropout', type=float, default=0.0, metavar='encoder_dropout',
+                        help='dropout after the scaled dot-product in attention (default: 0.0)')
+    parser.add_argument('--decoder-dropout', type=float, default=0.0, metavar='decoder_dropout',
+                        help='dropout for the decoder layers (default: 0.0)')
+    parser.add_argument('--reg-layernorm', action='store_true', default=False,
+                        help='use the conventional layer normalization')
+    parser.add_argument('--epochs', type=int, default=100, metavar='N',
+                        help='number of epochs to train (default: 100)')
+    parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
+                        help='max learning rate (default: 0.001)')
+    parser.add_argument('--gamma', type=float, default=0.1, metavar='regularizer',
+                        help='strength of gradient regularizer (default: 0.1)')
+    parser.add_argument('--no-cuda', action='store_true', default=False,
+                        help='disables CUDA training')
+    parser.add_argument('--seed', type=int, default=SEED, metavar='Seed',
+                        help='random seed (default: 1127802)')
+    return parser.parse_args()
+
+
+def get_args_2d(subsample_nodes=3,
+                subsample_attn=10,
+                gamma=0.5,
+                noise=0.0,
+                inverse=False):
+    if inverse:
+        parser = argparse.ArgumentParser(
+            description='Example 3: inverse coefficient identification problem for Darcy interface flow')
+    else:
+        parser = argparse.ArgumentParser(
+        description='Example 2: Darcy interface flow')
+
+    n_grid = int(((421 - 1)/subsample_nodes) + 1)
+    n_grid_c = int(((421 - 1)/subsample_attn) + 1)
+
+    parser.add_argument('--subsample-nodes', type=int, default=subsample_nodes, metavar='subsample',
+                        help=f'input fine grid sampling from 421x421 (default: {subsample_nodes} i.e., {n_grid}x{n_grid} grid)')
+    parser.add_argument('--subsample-attn', type=int, default=6, metavar='subsample_attn',
+                        help=f'input coarse grid sampling from 421x421 (default: {subsample_attn} i.e., {n_grid_c}x{n_grid_c} grid)')
+    parser.add_argument('--batch-size', type=int, default=4, metavar='N',
+                        help='input batch size for training (default: 4)')
+    parser.add_argument('--val-batch-size', type=int, default=4, metavar='N',
+                        help='input batch size for validation (default: 4)')
+    parser.add_argument('--attention-type', type=str, default='galerkin', metavar='attn_type',
+                        help='input attention type for encoders (possile: fourier (alias integral, local), galerkin (alias global), softmax (official PyTorch implementation), linear (standard Q(K^TV) with softmax), default: galerkin)')
+    parser.add_argument('--noise', type=float, default=noise, metavar='noise',
+                        help=f'strength of noise imposed (default: {noise})')
+    parser.add_argument('--xavier-init', type=float, default=1e-2, metavar='xavier_init',
+                        help='input Xavier initialization strength for Q,K,V weights (default: 0.01)')
+    parser.add_argument('--diag-weight', type=float, default=1e-2, metavar='diag_weight',
+                        help='input diagonal weight initialization strength for Q,K,V weights (default: 0.01)')
+    parser.add_argument('--ffn-dropout', type=float, default=0.05, metavar='ffn_dropout',
+                        help='dropout for the FFN in attention (default: 0.05)')
+    parser.add_argument('--encoder-dropout', type=float, default=0.05, metavar='encoder_dropout',
+                        help='dropout after the scaled dot-product in attention (default: 0.05)')
+    parser.add_argument('--dropout', type=float, default=0.0, metavar='dropout',
+                        help='dropout before the decoder layers (default: 0.0)')
+    parser.add_argument('--decoder-dropout', type=float, default=0.0, metavar='decoder_dropout',
+                        help='dropout in the decoder layers (default: 0.0)')
+    parser.add_argument('--reg-layernorm', action='store_true', default=False,
+                        help='use the conventional layer normalization')
+    parser.add_argument('--epochs', type=int, default=100, metavar='N',
+                        help='number of epochs to train (default: 100)')
+    parser.add_argument('--lr', type=float, default=1e-3, metavar='LR',
+                        help='max learning rate (default: 0.001)')
+    parser.add_argument('--gamma', type=float, default=gamma, metavar='regularizer',
+                        help=f'strength of gradient regularizer (default: {gamma})')
+    parser.add_argument('--no-cuda', action='store_true', default=False,
+                        help='disables CUDA training')
+    parser.add_argument('--seed', type=int, default=SEED, metavar='Seed',
+                        help='random seed (default: 1127802)')
+    return parser.parse_args()
 
 def train_batch_burgers(model, loss_func, data, optimizer, lr_scheduler, device, grad_clip=0.999):
     optimizer.zero_grad()

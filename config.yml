@@ -96,7 +96,7 @@ ex3_darcy_inv:
   symmetric_init: False
   layer_norm: True
   attn_norm: False
-  norm_eps: 1e-7
+  norm_eps: 0.0000001
   batch_norm: False
   return_attn_weight: False
   return_latent: False

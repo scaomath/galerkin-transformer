@@ -1,44 +1,9 @@
 from libs import *
-import argparse
-from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import OneCycleLR
-
 SEED = 1127802
 DEBUG = False
 
 def main():
-    parser = argparse.ArgumentParser(description='Example 1: Burgers equation')
-    parser.add_argument('--subsample', type=int, default=4, metavar='subsample',
-                        help='input sampling from 8192 (default: 4 i.e., 2048 grid)')
-    parser.add_argument('--batch-size', type=int, default=8, metavar='N',
-                        help='input batch size for training (default: 8)')
-    parser.add_argument('--val-batch-size', type=int, default=4, metavar='N',
-                        help='input batch size for validation (default: 4)')
-    parser.add_argument('--attention-type', type=str, default='fourier', metavar='attn_type',
-                        help='input attention type for encoders (possile: fourier (alias integral, local), galerkin (alias global), softmax (official PyTorch implementation), linear (standard Q(K^TV) with softmax), default: fourier)')
-    parser.add_argument('--xavier-init', type=float, default=0.01, metavar='xavier_init',
-                        help='input Xavier initialization strength for Q,K,V weights (default: 0.01)')
-    parser.add_argument('--diag-weight', type=float, default=0.01, metavar='diag_weight',
-                        help='input diagonal weight initialization strength for Q,K,V weights (default: 0.01)')
-    parser.add_argument('--ffn-dropout', type=float, default=0.0, metavar='ffn_dropout',
-                        help='dropout for the FFN in attention (default: 0.0)')
-    parser.add_argument('--encoder-dropout', type=float, default=0.0, metavar='encoder_dropout',
-                        help='dropout after the scaled dot-product in attention (default: 0.0)')
-    parser.add_argument('--decoder-dropout', type=float, default=0.0, metavar='decoder_dropout',
-                        help='dropout for the decoder layers (default: 0.0)')
-    parser.add_argument('--reg-layernorm', action='store_true', default=False,
-                        help='use the conventional layer normalization')
-    parser.add_argument('--epochs', type=int, default=100, metavar='N',
-                        help='number of epochs to train (default: 100)')
-    parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
-                        help='max learning rate (default: 0.001)')
-    parser.add_argument('--gamma', type=float, default=0.1, metavar='regularizer',
-                        help='strength of gradient regularizer (default: 0.1)')
-    parser.add_argument('--no-cuda', action='store_true', default=False,
-                        help='disables CUDA training')
-    parser.add_argument('--seed', type=int, default=SEED, metavar='Seed',
-                        help='random seed (default: 1127802)')
-    args = parser.parse_args()
+    args = get_args_1d()
     
     cuda = not args.no_cuda and torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')

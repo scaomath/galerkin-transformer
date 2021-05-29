@@ -127,7 +127,6 @@ class BurgersDataset(Dataset):
         self.n_features = self.node_features.shape[-1]
         self.pos = grid[..., None] if self.uniform else grid
         self.pos_fine = grid_fine[..., None]
-        # (N, S, T)
         self.target = targets[..., None] if targets.ndim == 2 else targets
 
     def _set_seed(self):
@@ -237,11 +236,6 @@ class BurgersDataset(Dataset):
 
             grid, ix, ix_fine = self.get_grid(sampling_density)
 
-            # # biggest derivative + lap sampling (fine grid and coarse grid)
-            # sampling_density_sorted = (-sampling_density).argsort()
-            # ix_fine = np.sort(sampling_density_sorted[:self.super_resolution*n_nodes-2])
-            # ix = np.sort(sampling_density_sorted[:n_nodes-2])
-
             grids.append(grid)
             node = x_data[i, ix]  # coarse grid
             target, target_diff = y_data[i,
@@ -250,8 +244,6 @@ class BurgersDataset(Dataset):
             nodes.append(node)
             targets.append(target)
             targets_diff.append(target_diff)
-
-        # nodes_u = x_data[:,::self.subsample]
 
         if self.super_resolution >= 2:
             nodes_u = x_data[:, ::self.supsample]
@@ -337,8 +329,7 @@ class BurgersDataset(Dataset):
             pos = self.pos[:, :pos_dim]
         else:
             pos = self.pos[index, :, :pos_dim]
-        grid = pos[..., 0]  # downsampled grid (nonuniform if applicable)
-        # (N, S, 2) non-uniform grid at last index 0, uniform index 1
+        grid = pos[..., 0]
         if self.online_features:
             edge = get_laplacian_1d(
                 grid, normalize=True).toarray().astype(np.float32)
@@ -363,18 +354,14 @@ class BurgersDataset(Dataset):
             edge_features = torch.from_numpy(self.edge_features[index])
             mass = torch.from_numpy(self.mass_features[index])
         else:
-            # edge_features = torch.eye(self.n_grid).view(
-            #     self.n_grid, self.n_grid, 1)
-            # mass = torch.eye(self.n_grid)
             edge_features = torch.tensor([1.0])
             mass = torch.tensor([1.0])
 
         if self.return_downsample_grid:
             self.pos_fine = grid[..., None]
-        pos_fine = torch.from_numpy(self.pos_fine)  # (N, n, 1) fine grid
-        pos = torch.from_numpy(grid[..., None])  # (N, n_s, 1) subsampled grid
+        pos_fine = torch.from_numpy(self.pos_fine)
+        pos = torch.from_numpy(grid[..., None])
         node_features = torch.from_numpy(self.node_features[index])
-        # target in the frequency domain
         target = torch.from_numpy(self.target[index])
         return dict(node=node_features.float(),
                     pos=pos.float(),
@@ -717,6 +704,7 @@ class DarcyDataset(Dataset):
         factor = np.round(factor, 3)
         if last_digit < 5:
             factor += 5e-3
+        factor = int(factor/5e-3 + 5e-1 ) * 5e-3
         down_factor = (factor, factor)
         n_m = round(n_f*factor)-1
         up_size = ((n_m, n_m), (n_f, n_f))
@@ -920,7 +908,6 @@ class WeightedL2Loss(_WeightedLoss):
         batch_size = targets.size(0)
 
         h = self.h
-        # K = torch.tensor(1) if K is None else K # (N, S, 1) or just a constant
         if self.noise > 0:
             targets = self._noise(targets, targets.size(-1), self.noise)
 
@@ -979,7 +966,6 @@ class WeightedL2Loss(_WeightedLoss):
                     assert tr.size(-1) == mat_dim
                     diag = [torch.diag(tr[i, :]) for i in range(batch_size)]
                     diag = torch.stack(diag, dim=0)
-                # pred_mm: (-1, E, E) if global (-1, S, S) if local
                 ortho.append(
                     self.delta * ((pred_mm - diag)**2).mean(dim=(-1, -2)))
             orthogonalizer = torch.stack(ortho, dim=-1)
@@ -1044,7 +1030,6 @@ class WeightedL2Loss2d(_WeightedLoss):
             raise NotImplementedError(
                 "Not implemented: dim > 2 not implemented")
 
-        # m, n = u.size(1), u.size(2)
         grad_x = (u[:, d:, s:-s] - u[:, :-d, s:-s])/d
         grad_y = (u[:, s:-s, d:] - u[:, s:-s, :-d])/d
         grad = torch.stack([grad_x, grad_y], dim=-1)
@@ -1066,7 +1051,7 @@ class WeightedL2Loss2d(_WeightedLoss):
 
         h = self.h if weights is None else weights
         d = self.dim
-        K = torch.tensor(1) if K is None else K  # (N, n, n) or just a constant
+        K = torch.tensor(1) if K is None else K
         if self.noise > 0:
             targets = self._noise(targets, targets.size(-1), self.noise)
 

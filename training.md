@@ -1,29 +1,51 @@
 # Training details for each model
+- `--no-cuda`: use CPU, not recommended.
+- `--reg-layernorm`: use the conventional layer normalization scheme that kills all scalings.
+- `--batch-size` + a number.
+- `--attention-type`: `'softmax'`,  `'fourier'`,  `'linear'`, or  `'galerkin'`.
+- `--xavier-init`: gain for Xavier init for `W^{Q,K,V}`.
+- `--diag-weight`: a small diagonal matrix is added to the initialization of `W^{Q,K,V}`, recommended value is `1e-2`.
+- `--gamma`: the strength of the $H^1$-seminorm regularizer, `0.1` in Example 1, and `0.5` in Example 2, when the target is not a smooth function, set this to 0.
+- `--seed`: RNG, default `1127802`.
 
 
-## Example 1: viscous Burgers' equation
-On the finest grid, `n=8192`. Note that softmax normalization will result diverging training depending on seed. 
+If we want to compare with the regular layer normalization scheme, just add `--reg-layernorm` in the end.
 
-Best Fourier Transformer model:
+# Example 1: viscous Burgers' equation
+On the finest grid, `n=8192`. It is recommended using the diagonal dominant initialization for even the classic softmax normalized Transformer, as the regular Xavier initialization with gain `1` will result diverging training depending on seed.
+
+Fourier Transformer model:
 ```bash
-python ex1_burgers.py --subsample 1\
-                      --attention-type 'fourier'\
-                      --xavier-init 0.001 --diag-weight 0.01\
-                      --ffn-dropout 0.05\
-                      --batch-size 4
+python ex1_burgers.py --subsample 1 --attention-type 'fourier' --xavier-init 0.001 --diag-weight 0.01  --ffn-dropout 0.05 --batch-size 4
 ```
 
-Best Galerkin Transformer model:
+Galerkin Transformer model:
 ```bash
-python ex1_burgers.py --subsample 1\
-                      --attention-type 'galerkin'\
-                      --xavier-init 0.01 --diag-weight 0.01\
-                      --batch-size 4
+python ex1_burgers.py --subsample 1 --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01 --batch-size 4
+```
+
+Subsample 4, i.e., `n=2048`.
+```bash
+python ex1_burgers.py --subsample 4 --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01 --batch-size 4
+```
+
+```bash
+python ex1_burgers.py --subsample 4 --attention-type 'fourier' --xavier-init 0.001 --diag-weight 0.01  --ffn-dropout 0.05 --batch-size 4
 ```
 
 
-## Memory profiling:
-#### Example 1:
+# Example 2:
+
+`141x141` fine grid, `43x43` coarse grid: 
+
+```bash
+python ex2_darcy.py --subsample-attn 10 --subsample-nodes 3 --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01
+```
+
+
+# Memory profiling:
+
+## Example 1:
 ```bash
 python ex1_memory_profile.py --batch-size 4 --seq-len 8192 --dmodel 96 --num-iter 1 --attention-type 'softmax' 'fourier' 'linear' 'galerkin'
 ```
@@ -32,7 +54,7 @@ Only checking speed not memory
 python ex1_memory_profile.py --no-memory --batch-size 4 --seq-len 8192 --dmodel 96 --num-iter 1000 --attention-type 'galerkin'
 ```
 
-#### Example 2:
+## Example 2:
 a 2D model with 128 hidden dimension, using the default `141x141` fine grid, `43x43` coarse grid set up.
 ```bash
 python ex2_memory_profile.py --batch-size 4 --dmodel 128 --attention-type 'softmax' 'fourier' 'linear' 'galerkin'
@@ -42,14 +64,14 @@ To replicate the results in paper:
 python ex2_memory_profile.py --batch-size 4 --dmodel 128 --attention-type 'softmax' 'fourier' 'linear' 'galerkin' --subsample-nodes 2 --subsample-attn 7 --num-iter 1
 ```
 
-For real memory usage, use `{$ATTN_TYPE}` can be 'fourier', etc
-```
-python ex2_memory_profile.py --batch-size 4 --dmodel 128 --attention-type {$ATTN_TYPE} --subsample-nodes 2 --subsample-attn 7 --num-iter 100
+For real memory usage, use `{$ATTN_TYPE}`, it can be `'softmax'`, `'fourier'`, `'linear'`, or `'galerkin'`:
+```bash
+python ex2_memory_profile.py --batch-size 4 --dmodel 128 --attention-type {$ATTN_TYPE} --subsample-nodes 2 --subsample-attn 7 --num-iter 1000
 ```
 then open up bash and use `nvidia-smi` to check the active Python process's memory.
 
 
-#### Only encoder profiling
+## Only encoder profiling
 The bottleneck of Example 2 and 3 is actually the feature extractor, to profile encoder performance only:
 ```bash
 python encoder_memory_profile.py --seq-len 8192 --batch-size 4 --dmodel 128 --head 1 --num-layers 4 --ndim 2 --num-iter 1000 --attention-type 'galerkin'
