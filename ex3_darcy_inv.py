@@ -12,7 +12,6 @@ def main():
     cuda = not args.no_cuda and torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     kwargs = {'pin_memory': True} if cuda else {}
-    get_seed(args.seed)
 
     train_path = os.path.join(DATA_PATH, 'piececonst_r421_N1024_smooth1.mat')
     test_path = os.path.join(DATA_PATH, 'piececonst_r421_N1024_smooth2.mat')
@@ -101,7 +100,11 @@ def main():
     print(f"Saving model and result in {MODEL_PATH}/{model_name}\n")
 
     epochs = args.epochs
-    lr = args.lr
+    tqdm_mode = 'epoch' if not args.show_batch else 'batch'
+    if config['attention_type'] in ['fourier', 'softmax']:
+        lr = min(args.lr, 5e-4)
+    else:
+        lr = args.lr
     h = (1/421)*args.subsample_nodes
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = OneCycleLR(optimizer, max_lr=lr, div_factor=1e4, final_div_factor=1e4,
@@ -118,7 +121,7 @@ def main():
                        validate_epoch=validate_epoch_darcy,
                        epochs=epochs,
                        patience=None,
-                       tqdm_mode='batch',
+                       tqdm_mode=tqdm_mode,
                        model_name=model_name,
                        result_name=result_name,
                        device=device)

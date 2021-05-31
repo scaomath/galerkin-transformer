@@ -55,7 +55,7 @@ class FourierTransformerEncoderLayer(nn.Module):
                  ):
         super(FourierTransformerEncoderLayer, self).__init__()
 
-        dropout = default(dropout, 0.05)
+        dropout = default(dropout, 0.1)
         if attention_type in ['linear', 'softmax']:
             dropout = 0.1
         ffn_dropout = default(ffn_dropout, dropout)
@@ -943,7 +943,7 @@ class FourierTransformer2D(nn.Module):
             setattr(self, key, self.config[key])
 
         self.dim_feedforward = default(self.dim_feedforward, 2*self.n_hidden)
-        self.dropout = default(self.dropout, 0.05)
+        self.dropout = default(self.dropout, 0.1)
         self.dpo = nn.Dropout(self.dropout)
         if self.decoder_type == 'attention':
             self.num_ft_layers += 1

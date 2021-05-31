@@ -12,13 +12,17 @@
 - `--seed`: RNG, default `1127802`.
 
 
-If we want to compare with the regular layer normalization scheme, just add `--reg-layernorm` in the end. If we want to compare the softmax normalized counterparts, just change `'galerkin'` to `'linear'`, `'fourier'` to `'softmax'` and the setting should be carried over.
-If we want to compare with the FNO baselines, please fork the repo at https://github.com/zongyi-li/fourier_neural_operator and change the scheduler in `fourier_1d.py` and `fourier_2d.py` to:
-```python
-epochs = 100
-scheduler = OneCycleLR(optimizer, max_lr=1e-3, div_factor=1e4, final_div_factor=1e4,
-                        steps_per_epoch=len(train_loader), epochs=epochs)
-```
+## Remarks on various comparisons
+- If we want to compare with the regular layer normalization scheme, just add `--reg-layernorm` in the end, the new scale-preserving layer normalization will be automatically disabled.
+- If we want to compare the softmax normalized counterparts, just change `'galerkin'` to `'linear'`, `'fourier'` to `'softmax'`, and the setting should be carried over. 
+- If we want to use the default setting of the original Transformer, please use `--xavier-init 1 --diag-weight 0 --ffn-dropout 0.1 --encoder-dropout 0.1` in the arguments.
+- By default, the noise for the inverse coefficient identification problem is 0.01. If we want to have a specific noise, please `--noise $NOISE`.
+- If we want to compare with the FNO baselines, please clone the repo at https://github.com/zongyi-li/fourier_neural_operator to local, and change the scheduler in `fourier_1d.py` and `fourier_2d.py` to:
+    ```python
+    epochs = 100
+    scheduler = OneCycleLR(optimizer, max_lr=1e-3, div_factor=1e4, final_div_factor=1e4,
+                            steps_per_epoch=len(train_loader), epochs=epochs)
+    ```
 
 
 
@@ -36,13 +40,15 @@ python ex1_burgers.py --subsample 1 --attention-type 'galerkin' --xavier-init 0.
 ```
 
 Subsample 4, i.e., `n=2048`.
-```bash
-python ex1_burgers.py --subsample 4 --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01 --batch-size 4
-```
 
 ```bash
 python ex1_burgers.py --subsample 4 --attention-type 'fourier' --xavier-init 0.001 --diag-weight 0.01  --ffn-dropout 0.05 --batch-size 4
 ```
+
+```bash
+python ex1_burgers.py --subsample 4 --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01 --batch-size 4
+```
+
 
 
 # Example 2:
@@ -53,11 +59,21 @@ python ex2_darcy.py --subsample-attn 10 --subsample-nodes 3 --attention-type 'ga
 ```
 
 ```bash
-python ex2_darcy.py --subsample-attn 10 --subsample-nodes 3 --attention-type 'fourier' --xavier-init 0.01 --diag-weight 0.01 --ffn-dropout 0.1 --lr 0.0005
+python ex2_darcy.py --subsample-attn 10 --subsample-nodes 3 --attention-type 'fourier' --xavier-init 0.01 --diag-weight 0.01 --ffn-dropout 0.1 --encoder-dropout 0.1 --lr 0.0005
+```
+
+`211x211` fine grid, `61x61` coarse grid:
+```bash
+python ex2_darcy.py --subsample-attn 7 --subsample-nodes 2 --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01 --ffn-dropout 0.05 --encoder-dropout 0.1
+```
+
+Using Fourier attention is not recommended (slow due to the `n^2`-complexity of local attention):
+```bash
+python ex2_darcy.py --subsample-attn 7 --subsample-nodes 2 --attention-type 'fourier' --xavier-init 0.001 --diag-weight 0.01 --ffn-dropout 0.1 --encoder-dropout 0.05 --lr 0.0005
 ```
 
 # Example 3:
-`211x211` fine grid, `71x71` coarse grid:
+On a `211x211` fine grid, `71x71` coarse grid:
 ```bash
 python ex3_darcy_inv.py --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01
 ```
@@ -99,7 +115,7 @@ python ex2_memory_profile.py --batch-size 4 --dmodel 128 --attention-type 'softm
 
 For real memory usage, use `{$ATTN_TYPE}`, it can be `'softmax'`, `'fourier'`, `'linear'`, or `'galerkin'`:
 ```bash
-python ex2_memory_profile.py --batch-size 4 --dmodel 128 --attention-type {$ATTN_TYPE} --subsample-nodes 2 --subsample-attn 7 --num-iter 1000
+python ex2_memory_profile.py --batch-size 4 --dmodel 128 --attention-type $ATTN_TYPE --subsample-nodes 2 --subsample-attn 7 --num-iter 1000
 ```
 then open up bash and use `nvidia-smi` to check the active Python process's memory.
 

@@ -35,6 +35,8 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 SRC_ROOT = os.path.dirname(current_path)
 MODEL_PATH = default(os.environ.get('MODEL_PATH'), os.path.join(SRC_ROOT, 'models'))
 DATA_PATH = default(os.environ.get('DATA_PATH'), os.path.join(SRC_ROOT, 'data'))
+FIG_PATH = default(os.environ.get('FIG_PATH'), 
+                   os.path.join(os.path.dirname(SRC_ROOT), 'figures'))
 EPOCH_SCHEDULERS = ['ReduceLROnPlateau', 'StepLR', 'MultiplicativeLR',
                     'MultiStepLR', 'ExponentialLR', 'LambdaLR']
 PI = math.pi
@@ -556,6 +558,8 @@ def get_args_2d(subsample_nodes=3,
                         help=f'dropout in the decoder layers (default: {decoder_dropout})')
     parser.add_argument('--reg-layernorm', action='store_true', default=False,
                         help='use the conventional layer normalization')
+    parser.add_argument('--show-batch', action='store_true', default=False,
+                        help='show batch training result')
     parser.add_argument('--epochs', type=int, default=100, metavar='N',
                         help='number of epochs to train (default: 100)')
     parser.add_argument('--lr', type=float, default=1e-3, metavar='LR',

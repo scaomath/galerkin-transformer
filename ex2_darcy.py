@@ -5,11 +5,16 @@ DEBUG = False
 
 def main():
     args = get_args_2d()
+    os.environ['PYTHONHASHSEED'] = str(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
     
     cuda = not args.no_cuda and torch.cuda.is_available()
+    if cuda: 
+        torch.cuda.manual_seed(args.seed)
+        torch.cuda.manual_seed_all(args.seed)
     device = torch.device('cuda' if cuda else 'cpu')
     kwargs = {'pin_memory': True} if cuda else {}
-    get_seed(args.seed)
 
     train_path = os.path.join(DATA_PATH, 'piececonst_r421_N1024_smooth1.mat')
     test_path = os.path.join(DATA_PATH, 'piececonst_r421_N1024_smooth2.mat')
@@ -92,7 +97,7 @@ def main():
                                              additional_str=f'32f'
                                              )
     print(f"Saving model and result in {MODEL_PATH}/{model_name}\n")
-
+    
     epochs = args.epochs
     if config['attention_type'] in ['fourier', 'softmax']:
         lr = min(args.lr, 5e-4)
