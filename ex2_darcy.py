@@ -138,6 +138,22 @@ def main():
     plt.legend()
     plt.show()
 
+    sample = next(iter(valid_loader))
+    a = sample['node']
+    pos = sample['pos']
+    u = sample['target']
+    grid = sample['grid']
+    with torch.no_grad():
+        model.eval()
+        out_ = model(a.to(device), None, pos.to(device), grid.to(device))
+        preds = out_['preds']
+
+    for i in range(args.val_batch_size):
+        z = preds[i, ..., 0].cpu().numpy()
+        z_true = u[i, ..., 0].cpu().numpy()
+        _ = showcontour(z, width=500, height=500,)
+        _ = showcontour(z_true, width=500, height=500,)
+        print("Relative error: ", np.linalg.norm(z-z_true)/np.linalg.norm(z_true))
 
 if __name__ == '__main__':
     main()

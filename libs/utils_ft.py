@@ -380,9 +380,17 @@ def showsurf(x, y, z, **kwargs):
 
 def showcontour(z, **kwargs):
     '''
-    show 2D solution z of its contour 
+    show 2D solution z of its contour
     '''
-    uplot = go.Contour(z=z,  colorscale='RdYlBu', line_smoothing=0.85)
+    uplot = go.Contour(z=z,
+                       colorscale='balance',
+                       line_smoothing=0.85,
+                       line_width=0.1,
+                       contours=dict(
+                           coloring='heatmap',
+                           showlabels=True,
+                       )
+                       )
     fig = go.Figure(data=uplot,
                     layout={'xaxis': {'title': 'x-label',
                                       'visible': False,
@@ -393,12 +401,13 @@ def showcontour(z, **kwargs):
     fig.update_traces(showscale=False)
     if 'template' not in kwargs.keys():
         fig.update_layout(template='plotly_dark',
-                          margin=dict(l=5, r=5, t=5, b=5),
+                          margin=dict(l=0, r=0, t=0, b=0),
                           **kwargs)
     else:
-        fig.update_layout(margin=dict(l=5, r=5, t=5, b=5),
+        fig.update_layout(margin=dict(l=0, r=0, t=0, b=0),
                           **kwargs)
     fig.show()
+    return fig
 
 
 def showresult(result=dict(), title=None, result_type='convergence',

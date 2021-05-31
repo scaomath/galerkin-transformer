@@ -95,6 +95,11 @@ def main():
                        result_name=result_name,
                        device=device)
 
+    model.load_state_dict(torch.load(os.path.join(MODEL_PATH, model_name)))
+    model.eval()
+    val_metric = validate_epoch_burgers(model, metric_func, valid_loader, device)
+    print(f"\nBest model's validation metric in this run: {val_metric}")
+
     plt.figure(1)
     loss_train = result['loss_train']
     loss_val = result['loss_val']
@@ -104,6 +109,29 @@ def main():
     plt.legend()
     plt.show()
 
+    sample = next(iter(valid_loader))
+    node = sample['node']
+    pos = sample['pos']
+    grid = sample['grid']
+    u = sample['target']
+
+    with torch.no_grad():
+        model.eval()
+        out_dict = model(node.to(device), None,
+                        pos.to(device), grid.to(device))
+
+    out = out_dict['preds']
+    preds = out[..., 0].detach().cpu()
+
+    _, axes = plt.subplots(nrows=args.val_batch_size, ncols=1, figsize=(20, 5*args.val_batch_size))
+    axes = axes.reshape(-1)
+    for i in range(args.val_batch_size):
+        grid = pos[i, :, 0]
+        axes[i].plot(grid, node[i, :, 0], '.', color='b', linewidth=1, label='f')
+        axes[i].plot(grid, u[i, :, 0], color='g', linewidth=2, label='u')
+        axes[i].plot(grid, preds[i, :], '--', color='r', linewidth=2, label='u_preds')
+        axes[i].legend()
+    plt.show()
 
 if __name__ == '__main__':
     main()
