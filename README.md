@@ -6,6 +6,7 @@
 TL;DR:
 The new attention operator is `(QK^T)V` or `Q(K^TV)`, whichever doing matmul gets the layer normalization, i.e., `Q, K` get layer normalized in local attention, as for `K, V` in global attention. No softmax, no layer normalization is applied afterward. This is called a scale-preserving simple attention. Combining with proper feature extractor and decoder, it is extremely powerful in learning PDE-related operators (energy decay, inverse coefficient identification).
 
+For how to train our models please refer to [`training.md`](./training.md).
 
 For details please refer to:
 ```latex
@@ -95,7 +96,24 @@ For a smaller memory GPU or CPU, please use the 85x85 grid fine, 29x29 coarse gr
 python ex2_darcy.py --subsample-attn 15 --subsample-nodes 5 --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01
 ```
 ## Example 3: Inverse interface coefficient identification for Darcy flow
-The baseline benchmark [`ex3_darcy_inv.py`](./ex3_darcy_inv.py): an inverse coefficient identification problem based on the same dataset used in Example 2. However, in this example, the input and the target are reversed, i.e., the target is the interface coefficient with a random geometry, and the input is the finite difference approximation to the PDE problem, together with an optional noise added to the input to simulate measurement errors. Due to a limit of interpolation operator having no approximation property to nonsmooth functions, the coefficient cannot be resolved at the resolution, the target is sampled at a lower resolution than the input. Evaluation relative error is about `1.5e-2` to `2e-2` without noise, `3e-2` with 1% noise, and `7e-2` to `8e-2` with 10% noise. The main source of the error stems from the magnitudes of the coefficient, the attention-based learner can capture the random interface geometry pretty well.
+
+**Evaluation data with no noise**
+
+![Evaluation input](./data/darcy_soln_0.0.png)
+
+**Evaluation data with 10% noise fed to the model**
+
+![Evaluation input](./data/darcy_soln_0.1.png)
+
+**True target (diffusion coefficient with a sharp interface)**
+
+![Evaluation target](./data/darcy_coeff.png)
+
+**Reconstructed target**
+
+![Evaluation target](./data/darcy_inv_pred_noise_0.05_train_0.1.png)
+
+The baseline benchmark [`ex3_darcy_inv.py`](./ex3_darcy_inv.py): an inverse coefficient identification problem based on the same dataset used in Example 2. However, in this example, the input and the target are reversed, i.e., the target is the interface coefficient with a random geometry, and the input is the finite difference approximation to the PDE problem, together with an optional noise added to the input to simulate measurement errors. Due to a limit of interpolation operator having no approximation property to nonsmooth functions, the coefficient cannot be resolved at the resolution, the target is sampled at a lower resolution than the input. Evaluation relative error is about `1.5e-2` to `2e-2` without noise, `2.5e-2` with 1% noise, and `7e-2` to `8e-2` with 10% noise in both train and test. If the training data is clean, then adding noise would not generalize well in the test. It is recommended to training with a reasonable amount of noise. 
 
 Default benchmark is on a 211x211 fine grid input and a 71x71 coarse grid coefficient output. The model is the Galerkin Transformer with 6 stacked Galerkin-type attention layers (`d_model=192`, `nhead=4`) with a simple pointwise feed-forward neural network to map the attention output back the desired dimension. There is a small dropout in every key components of the network (`5e-2`). The noise is added to the normalized input, so 0.01 noise means 1%, and 0.1 means 10%. By default there is 1% noise added.
 ```bash
