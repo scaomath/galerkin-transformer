@@ -8,15 +8,16 @@ The new attention operator is `(QK^T)V` or `Q(K^TV)`, whichever doing matmul get
 
 For how to train our models please refer to [`training.md`](./training.md).
 
-For details please refer to:
+For details please refer to: [https://arxiv.org/abs/2105.14995](https://arxiv.org/abs/2105.14995)
 ```latex
 @Misc{Cao:2021transformer,
   author        = {Shuhao Cao},
   title         = {Choose a Transformer: Fourier or Galerkin},
   year          = {2021},
   archiveprefix = {arXiv},
-  eprint        = {},
+  eprint        = {2105.14995},
   primaryclass  = {cs.CL},
+  url           = {https://arxiv.org/abs/2105.14995},
 }
 ```
 
@@ -79,7 +80,7 @@ python ex1_burgers.py --subsample 1 --attention-type 'galerkin' --xavier-init 0.
 ```
 Using standard softmax normalization `Softmax(QK^T/sqrt{d})V`, conventional layer normalization application scheme, default Xavier initialization.
 ```bash
-python ex1_burgers.py --attention-type 'softmax' --reg-layernorm --xavier-init 1.0 --diag-weight 0.0
+python ex1_burgers.py --attention-type 'softmax' --layer-norm --xavier-init 1.0 --diag-weight 0.0
 ```
 
 ## Example 2: Interface Darcy flow
@@ -97,11 +98,11 @@ python ex2_darcy.py --subsample-attn 15 --subsample-nodes 5 --attention-type 'ga
 ```
 ## Example 3: Inverse interface coefficient identification for Darcy flow
 
-**Evaluation data with no noise**
+**Evaluation input data with no noise**
 
 ![Evaluation input](./data/darcy_soln_0.0.png)
 
-**Evaluation data with 10% noise fed to the model**
+**Evaluation input data with 10% noise fed to the model**
 
 ![Evaluation input](./data/darcy_soln_0.1.png)
 

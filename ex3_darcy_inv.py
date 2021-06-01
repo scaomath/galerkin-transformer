@@ -1,6 +1,4 @@
 from libs import *
-SEED = 1127802
-DEBUG = False
 
 def main():
     with open(r'./config.yml') as f:
@@ -12,6 +10,7 @@ def main():
     cuda = not args.no_cuda and torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     kwargs = {'pin_memory': True} if cuda else {}
+    get_seed(args.seed)
 
     train_path = os.path.join(DATA_PATH, 'piececonst_r421_N1024_smooth1.mat')
     test_path = os.path.join(DATA_PATH, 'piececonst_r421_N1024_smooth2.mat')
@@ -22,9 +21,8 @@ def main():
                                  subsample_method='average',
                                  inverse_problem=True,
                                  train_data=True,
-                                 online_features=True if DEBUG else False,
                                  noise=args.noise,
-                                 train_len=1024 if not DEBUG else 0.05,)
+                                 train_len=1024,)
 
     valid_dataset = DarcyDataset(data_path=test_path,
                                  normalizer_x=train_dataset.normalizer_x,
@@ -35,10 +33,9 @@ def main():
                                  inverse_problem=True,
                                  train_data=False,
                                  noise=args.noise,
-                                 online_features=True if DEBUG else False,
                                  valid_len=100,)
-
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
+    bsz = 2 if args.subsample_attn <=7 else args.batch_size
+    train_loader = DataLoader(train_dataset, batch_size=bsz, shuffle=True,
                               drop_last=True, **kwargs)
     valid_loader = DataLoader(valid_dataset, batch_size=args.val_batch_size, shuffle=False,
                               drop_last=False, **kwargs)
@@ -75,6 +72,7 @@ def main():
     config['upscaler_size'] = (n_grid_c, n_grid_c), (n_grid_c, n_grid_c)
     config['normalizer'] = train_dataset.normalizer_y.to(device)
     config['downscaler_size'] = downsample
+    config['attn_norm'] = not args.layer_norm
     for arg in vars(args):
         if arg in config.keys():
             config[arg] = getattr(args, arg)
@@ -101,10 +99,7 @@ def main():
 
     epochs = args.epochs
     tqdm_mode = 'epoch' if not args.show_batch else 'batch'
-    if config['attention_type'] in ['fourier', 'softmax']:
-        lr = min(args.lr, 5e-4)
-    else:
-        lr = args.lr
+    lr = args.lr
     h = (1/421)*args.subsample_nodes
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = OneCycleLR(optimizer, max_lr=lr, div_factor=1e4, final_div_factor=1e4,

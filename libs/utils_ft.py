@@ -383,13 +383,13 @@ def showcontour(z, **kwargs):
     show 2D solution z of its contour
     '''
     uplot = go.Contour(z=z,
-                       colorscale='balance',
+                       colorscale='RdYlBu',
                        line_smoothing=0.85,
                        line_width=0.1,
-                       contours=dict(
-                           coloring='heatmap',
-                           showlabels=True,
-                       )
+                    #    contours=dict(
+                    #        coloring='heatmap',
+                    #        showlabels=True,
+                    #    )
                        )
     fig = go.Figure(data=uplot,
                     layout={'xaxis': {'title': 'x-label',
@@ -490,9 +490,9 @@ def get_args_1d():
     parser = argparse.ArgumentParser(description='Example 1: Burgers equation')
     parser.add_argument('--subsample', type=int, default=4, metavar='subsample',
                         help='input sampling from 8192 (default: 4 i.e., 2048 grid)')
-    parser.add_argument('--batch-size', type=int, default=8, metavar='N',
+    parser.add_argument('--batch-size', type=int, default=8, metavar='bsz',
                         help='input batch size for training (default: 8)')
-    parser.add_argument('--val-batch-size', type=int, default=4, metavar='N',
+    parser.add_argument('--val-batch-size', type=int, default=4, metavar='bsz',
                         help='input batch size for validation (default: 4)')
     parser.add_argument('--attention-type', type=str, default='fourier', metavar='attn_type',
                         help='input attention type for encoders (possile: fourier (alias integral, local), galerkin (alias global), softmax (official PyTorch implementation), linear (standard Q(K^TV) with softmax), default: fourier)')
@@ -506,7 +506,7 @@ def get_args_1d():
                         help='dropout after the scaled dot-product in attention (default: 0.0)')
     parser.add_argument('--decoder-dropout', type=float, default=0.0, metavar='decoder_dropout',
                         help='dropout for the decoder layers (default: 0.0)')
-    parser.add_argument('--reg-layernorm', action='store_true', default=False,
+    parser.add_argument('--layer-norm', action='store_true', default=False,
                         help='use the conventional layer normalization')
     parser.add_argument('--epochs', type=int, default=100, metavar='N',
                         help='number of epochs to train (default: 100)')
@@ -516,6 +516,8 @@ def get_args_1d():
                         help='strength of gradient regularizer (default: 0.1)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
+    parser.add_argument('--show-batch', action='store_true', default=False,
+                        help='show batch training result')
     parser.add_argument('--seed', type=int, default=SEED, metavar='Seed',
                         help='random seed (default: 1127802)')
     return parser.parse_args()
@@ -545,9 +547,9 @@ def get_args_2d(subsample_nodes=3,
                         help=f'input fine grid sampling from 421x421 (default: {subsample_nodes} i.e., {n_grid}x{n_grid} grid)')
     parser.add_argument('--subsample-attn', type=int, default=6, metavar='subsample_attn',
                         help=f'input coarse grid sampling from 421x421 (default: {subsample_attn} i.e., {n_grid_c}x{n_grid_c} grid)')
-    parser.add_argument('--batch-size', type=int, default=4, metavar='N',
+    parser.add_argument('--batch-size', type=int, default=4, metavar='bsz',
                         help='input batch size for training (default: 4)')
-    parser.add_argument('--val-batch-size', type=int, default=4, metavar='N',
+    parser.add_argument('--val-batch-size', type=int, default=4, metavar='bsz',
                         help='input batch size for validation (default: 4)')
     parser.add_argument('--attention-type', type=str, default='galerkin', metavar='attn_type',
                         help='input attention type for encoders (possile: fourier (alias integral, local), galerkin (alias global), softmax (official PyTorch implementation), linear (standard Q(K^TV) with softmax), default: galerkin)')
@@ -565,10 +567,8 @@ def get_args_2d(subsample_nodes=3,
                         help=f'dropout before the decoder layers (default: {dropout})')
     parser.add_argument('--decoder-dropout', type=float, default=decoder_dropout, metavar='decoder_dropout',
                         help=f'dropout in the decoder layers (default: {decoder_dropout})')
-    parser.add_argument('--reg-layernorm', action='store_true', default=False,
+    parser.add_argument('--layer-norm', action='store_true', default=False,
                         help='use the conventional layer normalization')
-    parser.add_argument('--show-batch', action='store_true', default=False,
-                        help='show batch training result')
     parser.add_argument('--epochs', type=int, default=100, metavar='N',
                         help='number of epochs to train (default: 100)')
     parser.add_argument('--lr', type=float, default=1e-3, metavar='LR',
@@ -577,6 +577,8 @@ def get_args_2d(subsample_nodes=3,
                         help=f'strength of gradient regularizer (default: {gamma})')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
+    parser.add_argument('--show-batch', action='store_true', default=False,
+                        help='show batch training result')
     parser.add_argument('--seed', type=int, default=SEED, metavar='Seed',
                         help='random seed (default: 1127802)')
     return parser.parse_args()
@@ -701,7 +703,6 @@ def validate_epoch_darcy(model, metric_func, valid_loader, device):
                 metric_val.append(metric)
 
     return dict(metric=np.mean(metric_val, axis=0))
-
 
 def run_train(model, loss_func, metric_func,
               train_loader, valid_loader,

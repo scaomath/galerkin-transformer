@@ -20,7 +20,7 @@ def main():
                         help='input d_model of attention for profiling (default: 64)')
     parser.add_argument('--num-iter', type=int, default=1, metavar='k',
                         help='input number of iteration of backpropagations for profiling (default: 1)')
-    parser.add_argument('--reg-layernorm', action='store_true', default=False,
+    parser.add_argument('--layer-norm', action='store_true', default=False,
                         help='use the conventional layer normalization')
     parser.add_argument('--no-memory', action='store_true', default=False,
                         help='disables memory profiling')

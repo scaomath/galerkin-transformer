@@ -1,13 +1,7 @@
 from libs import *
-SEED = 1127802
-DEBUG = False
-
 
 def main():
     args = get_args_2d()
-    os.environ['PYTHONHASHSEED'] = str(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
     
     cuda = not args.no_cuda and torch.cuda.is_available()
     if cuda: 
@@ -15,6 +9,7 @@ def main():
         torch.cuda.manual_seed_all(args.seed)
     device = torch.device('cuda' if cuda else 'cpu')
     kwargs = {'pin_memory': True} if cuda else {}
+    get_seed(args.seed)
 
     train_path = os.path.join(DATA_PATH, 'piececonst_r421_N1024_smooth1.mat')
     test_path = os.path.join(DATA_PATH, 'piececonst_r421_N1024_smooth2.mat')
@@ -22,15 +17,13 @@ def main():
                                  subsample_attn=args.subsample_attn,
                                  subsample_nodes=args.subsample_nodes,
                                  train_data=True,
-                                 online_features=True if DEBUG else False,
-                                 train_len=1024 if not DEBUG else 0.05,)
+                                 train_len=1024,)
 
     valid_dataset = DarcyDataset(data_path=test_path,
                                  normalizer_x=train_dataset.normalizer_x,
                                  subsample_attn=args.subsample_attn,
                                  subsample_nodes=args.subsample_nodes,
                                  train_data=False,
-                                 online_features=True if DEBUG else False,
                                  valid_len=100)
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
@@ -74,6 +67,7 @@ def main():
     config['normalizer'] = train_dataset.normalizer_y.to(device)
     config['downscaler_size'] = downsample
     config['upscaler_size'] = upsample
+    config['attn_norm'] = not args.layer_norm
     for arg in vars(args):
         if arg in config.keys():
             config[arg] = getattr(args, arg)

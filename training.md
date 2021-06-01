@@ -1,6 +1,6 @@
 # Training details for each model
 - `--no-cuda`: use CPU, not recommended.
-- `--reg-layernorm`: use the conventional layer normalization scheme that kills all scalings.
+- `--layer-norm`: use the conventional layer normalization scheme that kills all scalings.
 - `--batch-size` + a number.
 - `--attention-type`: `'softmax'`,  `'fourier'`,  `'linear'`, or  `'galerkin'`.
 - `--xavier-init`: gain for Xavier init for `W^{Q,K,V}`.
@@ -10,10 +10,11 @@
 - `--decoder-dropout`: dropout in the decoder block.
 - `--gamma`: the strength of the $H^1$-seminorm regularizer, `0.1` in Example 1, and `0.5` in Example 2, when the target is not a smooth function, set this to 0.
 - `--seed`: RNG, default `1127802`.
+- `--show-batch`: show the progress bar following each batch.
 
 
 ## Remarks on various comparisons
-- If we want to compare with the regular layer normalization scheme, just add `--reg-layernorm` in the end, the new scale-preserving layer normalization will be automatically disabled.
+- If we want to compare with the regular layer normalization scheme, just add `--layer-norm` in the end, the new scale-preserving layer normalization will be automatically disabled.
 - If we want to compare the softmax normalized counterparts, just change `'galerkin'` to `'linear'`, `'fourier'` to `'softmax'`, and the setting should be carried over. 
 - If we want to use the default setting of the original Transformer, please use `--xavier-init 1 --diag-weight 0 --ffn-dropout 0.1 --encoder-dropout 0.1` in the arguments.
 - By default, the noise for the inverse coefficient identification problem is 0.01. If we want to have a specific noise, please `--noise $NOISE`.
@@ -73,6 +74,8 @@ python ex2_darcy.py --subsample-attn 7 --subsample-nodes 2 --attention-type 'fou
 ```
 
 # Example 3:
+To add noise in both train and test data, just use `--noise $NOISE`. `0.1` means `10%` noise, etc.
+
 On a `211x211` fine grid, `71x71` coarse grid:
 ```bash
 python ex3_darcy_inv.py --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01
@@ -88,7 +91,7 @@ python ex3_darcy_inv.py --subsample-attn 12 --subsample-nodes 3 --attention-type
 ```
 
 ```bash
-python ex3_darcy_inv.py --subsample-attn 12 --subsample-nodes 3 --attention-type 'fourier' --xavier-init 0.01 --diag-weight 0.01 --ffn-dropout 0.1 --lr 0.0005
+python ex3_darcy_inv.py --subsample-attn 12 --subsample-nodes 3 --attention-type 'fourier' --xavier-init 0.01 --diag-weight 0.01 --lr 0.001
 ```
 
 

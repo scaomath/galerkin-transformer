@@ -1,6 +1,4 @@
 from libs import *
-SEED = 1127802
-DEBUG = False
 
 def main():
     args = get_args_1d()
@@ -52,7 +50,7 @@ def main():
         config = yaml.full_load(f)
     test_name = os.path.basename(__file__).split('.')[0]
     config = config[test_name]
-
+    config['attn_norm'] = not args.layer_norm
     for arg in vars(args):
         if arg in config.keys():
             config[arg] = getattr(args, arg)
@@ -75,6 +73,7 @@ def main():
     epochs = args.epochs
     lr = args.lr
     h = (1/2**13)*args.subsample
+    tqdm_mode = 'epoch' if not args.show_batch else 'batch'
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = OneCycleLR(optimizer, max_lr=lr, div_factor=1e4, final_div_factor=1e4,
                            steps_per_epoch=len(train_loader), epochs=epochs)
@@ -90,7 +89,7 @@ def main():
                        validate_epoch=validate_epoch_burgers,
                        epochs=epochs,
                        patience=None,
-                       tqdm_mode='epoch',
+                       tqdm_mode=tqdm_mode,
                        model_name=model_name,
                        result_name=result_name,
                        device=device)

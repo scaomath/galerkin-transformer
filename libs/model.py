@@ -61,6 +61,8 @@ class FourierTransformerEncoderLayer(nn.Module):
         ffn_dropout = default(ffn_dropout, dropout)
         norm_eps = default(norm_eps, 1e-5)
         attn_norm = default(attn_norm, not layer_norm)
+        if (not layer_norm) and (not attn_norm):
+            attn_norm = True
         norm_type = default(norm_type, 'layer')
 
         self.attn = SimpleAttention(n_head=n_head,
