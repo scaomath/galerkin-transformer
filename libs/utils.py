@@ -126,23 +126,23 @@ def get_system():
     
     print("="*30, "system info print done", "="*30)
 
-def get_seed(s, printout=True):
+def get_seed(s, printout=True, cudnn=True):
     # rd.seed(s)
     os.environ['PYTHONHASHSEED'] = str(s)
     np.random.seed(s)
+    # pd.core.common.random_state(s)
     # Torch
     torch.manual_seed(s)
     torch.cuda.manual_seed(s)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    if cudnn:
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(s)
 
     message = f'''
-    random.seed({s})
     os.environ['PYTHONHASHSEED'] = str({s})
     numpy.random.seed({s})
-    pandas.core.common.random_state({s})
     torch.manual_seed({s})
     torch.cuda.manual_seed({s})
     torch.backends.cudnn.deterministic = True
@@ -151,8 +151,8 @@ def get_seed(s, printout=True):
         torch.cuda.manual_seed_all({s})
     '''
     if printout:
-        print("\n")    
-        print(f"The following code snippets have been run." )
+        print("\n")
+        print(f"The following code snippets have been run.")
         print("="*50)
         print(message)
         print("="*50)

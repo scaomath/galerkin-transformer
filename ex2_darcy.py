@@ -97,7 +97,7 @@ def main():
         lr = min(args.lr, 5e-4)
     else:
         lr = args.lr
-    h = (1/421)*args.subsample_nodes
+    h = 1/n_grid
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = OneCycleLR(optimizer, max_lr=lr, div_factor=1e4, final_div_factor=1e4,
                            steps_per_epoch=len(train_loader), epochs=epochs)

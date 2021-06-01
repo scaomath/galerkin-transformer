@@ -44,8 +44,8 @@ class FourierTransformerEncoderLayer(nn.Module):
                  norm_eps=None,
                  batch_norm=False,
                  attn_weight=False,
-                 xavier_init: float = 1e-2,
-                 diagonal_weight: float = 1e-2,
+                 xavier_init: float=1e-2,
+                 diagonal_weight: float=1e-2,
                  symmetric_init=False,
                  residual_type='add',
                  activation_type='relu',
@@ -55,7 +55,7 @@ class FourierTransformerEncoderLayer(nn.Module):
                  ):
         super(FourierTransformerEncoderLayer, self).__init__()
 
-        dropout = default(dropout, 0.1)
+        dropout = default(dropout, 0.05)
         if attention_type in ['linear', 'softmax']:
             dropout = 0.1
         ffn_dropout = default(ffn_dropout, dropout)

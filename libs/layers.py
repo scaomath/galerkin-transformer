@@ -624,7 +624,7 @@ class SimpleAttention(nn.Module):
                  pos_dim: int = 1,
                  attention_type='fourier',
                  dropout=0.1,
-                 xavier_init=1e-2,
+                 xavier_init=1e-4,
                  diagonal_weight=1e-2,
                  symmetric_init=False,
                  norm=False,
