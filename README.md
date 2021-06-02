@@ -4,9 +4,11 @@
 [![Pytorch 1.8](https://img.shields.io/badge/pytorch-1.8-blue.svg)](https://pytorch.org/)
 
 TL;DR:
-The new attention operator is `(QK^T)V` or `Q(K^TV)`, whichever doing matmul gets the layer normalization, i.e., `Q, K` get layer normalized in local attention, as for `K, V` in global attention. No softmax, no layer normalization is applied afterward. This is called a scale-preserving simple attention. Combining with a proper feature extractor and decoder (FNO in [*Li et al 2020*](https://github.com/zongyi-li/fourier_neural_operator) if the target is smooth or just simple FFN if otherwise), it is extremely powerful in learning PDE-related operators (energy decay, inverse coefficient identification).
+The new attention operator is `(QK^T)V` or `Q(K^TV)`, whichever doing matmul gets the layer normalization, i.e., `Q, K` get layer normalized in local attention, as for `K, V` in global attention. No softmax, no layer normalization is applied afterward. This is called a scale-preserving simple attention. Feature extractors are simple FFN or interpolation-based CNN, the decoder is the spectral convolution from the best operator learner to-date FNO in [*Li et al 2020*](https://github.com/zongyi-li/fourier_neural_operator) if the target is smooth, or just pointwise FFN if otherwise, the network is extremely powerful in learning PDE-related operators (energy decay, inverse coefficient identification).
 
 For how to train our models please refer to [`training.md`](./training.md).
+
+Even though everyone is transformer'ing, the mathematics behind the attention mechanism is not well understood. We have also shown that the global attention (Galerkin-type if the softmax is removed) is nothing but a Petrov-Galerkin projection under a Hilbertian setup, using a method commonly known as ''mixed method'' in the finite element analysis community. The approximation is not discretization-tied, in that (1) the dimensions of the approximation spaces are not tied to the geometry as in the traditional finite element analysis (or finite difference, spectral methods, radial basis, etc); (2) the approximation spaces are being dynamically updated by the nonlinear universal approximator. 
 
 For details please refer to: [https://arxiv.org/abs/2105.14995](https://arxiv.org/abs/2105.14995)
 ```latex
@@ -74,16 +76,9 @@ Default benchmark on a 2048 grid using a Fourier Transformer, with 4 Fourier-typ
 ```bash
 python ex1_burgers.py
 ```
-If we want to try no subsampling (8192 grid), it is recommended to use the Galerkin-type attention. Note that we add a diagonal matrix to the Xavier initializations of the `W^Q, W^K, W^V` matrices (about 30%-1000% better than those without depending on other settings).
-```bash
-python ex1_burgers.py --subsample 1 --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01
-```
-Using standard softmax normalization `Softmax(QK^T/sqrt{d})V`, conventional layer normalization application scheme, default Xavier initialization.
-```bash
-python ex1_burgers.py --attention-type 'softmax' --layer-norm --xavier-init 1.0 --diag-weight 0.0
-```
+For more choices of arguments, please refer to [Example 1 in `training.md`](./training.md#Example-1-viscous-Burgers).
 
-## Example 2: Interface Darcy flow
+## Example 2 Interface Darcy's flow
 ![net](./data/2d_ft.png)
 
 The baseline benchmark [`ex2_darcy.py`](./ex2_darcy.py): evaluation relative error is about `8e-3` to `1e-2` with a 3-level interpolation-based CNN (CiNN) feature extractor. The coarse grid latent representation is sent to attention layers The operator input is discontinuous coefficient with a random interface sampled at a discrete grid, the output is a finite difference approximation to the solution restricted to the sampled grid from a fine `421x421` grid. The coefficient in the validation set are not in the train set.
@@ -94,9 +89,14 @@ python ex2_darcy.py
 ```
 For a smaller memory GPU or CPU, please use the 85x85 grid fine, 29x29 coarse grid setting:
 ```bash
-python ex2_darcy.py --subsample-attn 15 --subsample-nodes 5 --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01
+python ex2_darcy.py --subsample-attn 15 --subsample-nodes 5 --attention-type 'galerkin' --xavier-init 0.01 --diagonal-weight 0.01
 ```
-## Example 3: Inverse interface coefficient identification for Darcy flow
+For more choices of arguments, please refer to [Example 2 in `training.md`](./training.md#Example-2-interface-Darcy).
+
+## Example 3 Inverse coefficient identification for interface Darcy's flow
+
+Example 3 is an inverse interface coefficient identification for Darcy flow based on the same dataset used in Example 2. However, in this example, the input and the target are reversed, i.e., the target is the interface coefficient with a random geometry, and the input is the finite difference approximation to the PDE problem, together with an optional noise added to the input to simulate measurement errors. Due to a limit of interpolation operator having no approximation property to nonsmooth functions, the coefficient cannot be resolved at the resolution, the target is sampled at a lower resolution than the input. 
+
 
 **Evaluation input data with no noise**
 
@@ -114,7 +114,7 @@ python ex2_darcy.py --subsample-attn 15 --subsample-nodes 5 --attention-type 'ga
 
 ![Evaluation target](./data/darcy_inv_pred_noise_0.05_train_0.1.png)
 
-The baseline benchmark [`ex3_darcy_inv.py`](./ex3_darcy_inv.py): an inverse coefficient identification problem based on the same dataset used in Example 2. However, in this example, the input and the target are reversed, i.e., the target is the interface coefficient with a random geometry, and the input is the finite difference approximation to the PDE problem, together with an optional noise added to the input to simulate measurement errors. Due to a limit of interpolation operator having no approximation property to nonsmooth functions, the coefficient cannot be resolved at the resolution, the target is sampled at a lower resolution than the input. Evaluation relative error is about `1.5e-2` to `2e-2` without noise, `2.5e-2` with 1% noise, and `7e-2` to `8e-2` with 10% noise in both train and test. If the training data is clean, then adding noise would not generalize well in the test. It is recommended to training with a reasonable amount of noise. 
+The baseline benchmark [`ex3_darcy_inv.py`](./ex3_darcy_inv.py):  Evaluation relative error is about `1.5e-2` to `2e-2` without noise, `2.5e-2` with 1% noise, and `7e-2` to `8e-2` with 10% noise in both train and test. If the training data is clean, then adding noise would not generalize well in the test. It is recommended to training with a reasonable amount of noise. 
 
 Default benchmark is on a 211x211 fine grid input and a 71x71 coarse grid coefficient output. The model is the Galerkin Transformer with 6 stacked Galerkin-type attention layers (`d_model=192`, `nhead=4`) with a simple pointwise feed-forward neural network to map the attention output back the desired dimension. There is a small dropout in every key components of the network (`5e-2`). The noise is added to the normalized input, so 0.01 noise means 1%, and 0.1 means 10%. By default there is 1% noise added.
 ```bash
@@ -122,8 +122,10 @@ python ex3_darcy_inv.py --noise 0.01
 ```
 For a smaller memory GPU, please use the 141x141 grid fine, 36x36 coarse grid, and avoid using the local attention `fourier` or `softmax` in the `--attention-type` switch:
 ```bash
-python ex3_darcy_inv.py --subsample-attn 12 --subsample-nodes 3 --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01
+python ex3_darcy_inv.py --subsample-attn 12 --subsample-nodes 3 --attention-type 'galerkin' --xavier-init 0.01 --diagonal-weight 0.01
 ```
+For more choices of arguments, please refer to [Example 3 in `training.md`](./training.md#Example-3-inverse-Darcy).
+
 
 # Memory and speed profiling using `autograd.profiler`
 Using CUDA, Fourier Transformer features an over 40% reduction in `self_cuda_memory_usage` versus the standard softmax normalized transformers, and Galerkin Transformer's the backpropagation speed has a 20% to 100% increase over the standard linearized transformers. If no GPU is available please enable the `--no-cuda` switch.
@@ -134,14 +136,14 @@ python ex1_memory_profile.py --batch-size 4 --seq-len 8192 --dmodel 96 --attenti
 ```
 Compare the backpropagation time usage of the Galerkin transformer versus the same net, but with Galerkin-type simple attention replaced by the standard linearized attention. 
 ```bash
-python ex1_memory_profile.py --batch-size 4 --seq-len 8192 --dmodel 96 --num-iter 10 --attention-type 'linear' 'galerkin'
+python ex1_memory_profile.py --batch-size 4 --seq-len 8192 --dmodel 96 --num-iter 100 --attention-type 'linear' 'galerkin'
 ```
 
 Encoder layer wrapper profiling: profile a wrapper with 10 layers of encoder in a model for operators defined for functions whose domain is isomorphic to a 2D Euclidean space. Example:
 ```bash
 python encoder_memory_profile.py --batch-size 4 --dmodel 128 --num-layers 6 -ndim 2
 ```
-Please refer to [`training.md`](./training.md) for more detailed profiling in each example.
+Please refer to [the memory profile section in `training.md`](./training.md#Memory-profiling) for more detailed profiling in each example.
 
 
 # License

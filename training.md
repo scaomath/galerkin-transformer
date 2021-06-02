@@ -4,7 +4,7 @@
 - `--batch-size` + a number.
 - `--attention-type`: `'softmax'`,  `'fourier'`,  `'linear'`, or  `'galerkin'`.
 - `--xavier-init`: gain for Xavier init for `W^{Q,K,V}`.
-- `--diag-weight`: a small diagonal matrix is added to the initialization of `W^{Q,K,V}`, recommended value is `1e-2`.
+- `--diagonal-weight`: a small diagonal matrix is added to the initialization of `W^{Q,K,V}`, recommended value is `1e-2`.
 - `--encoder-dropout`: dropout for the attention weights.
 - `--ffn-dropout`: dropout for the FFN in attention blocks.
 - `--decoder-dropout`: dropout in the decoder block.
@@ -16,7 +16,7 @@
 ## Remarks on various comparisons
 - If we want to compare with the regular layer normalization scheme, just add `--layer-norm` in the end, the new scale-preserving layer normalization will be automatically disabled.
 - If we want to compare the softmax normalized counterparts, just change `'galerkin'` to `'linear'`, `'fourier'` to `'softmax'`, and the setting should be carried over. 
-- If we want to use the default setting of the original Transformer, please use `--xavier-init 1 --diag-weight 0 --ffn-dropout 0.1 --encoder-dropout 0.1` in the arguments.
+- If we want to use the default setting of the original Transformer, please use `--xavier-init 1 --diagonal-weight 0 --ffn-dropout 0.1 --encoder-dropout 0.1` in the arguments.
 - By default, the noise for the inverse coefficient identification problem is 0.01. If we want to have a specific noise, please `--noise $NOISE`.
 - If we want to compare with the FNO baselines, please clone the repo at https://github.com/zongyi-li/fourier_neural_operator to local, and change the scheduler in `fourier_1d.py` and `fourier_2d.py` to:
     ```python
@@ -27,71 +27,76 @@
 
 
 
-# Example 1: viscous Burgers' equation
-On the finest grid, `n=8192`. It is recommended using the diagonal dominant initialization for even the classic softmax normalized Transformer, as the regular Xavier initialization with gain `1` will result diverging training depending on seed.
+# Example 1 viscous Burgers
+On the finest grid, `n=8192` (no subsampling), it is recommended to use the Galerkin-type attention. Using the diagonal dominant initialization is recommended for even the classic softmax normalized Transformer, as the regular Xavier initialization with gain `1` will result diverging training depending on seed.
 
 Fourier Transformer model:
 ```bash
-python ex1_burgers.py --subsample 1 --attention-type 'fourier' --xavier-init 0.001 --diag-weight 0.01  --ffn-dropout 0.05 --batch-size 4
+python ex1_burgers.py --subsample 1 --attention-type 'fourier' --xavier-init 0.001 --diagonal-weight 0.01  --ffn-dropout 0.05 --batch-size 4
 ```
 
 Galerkin Transformer model:
 ```bash
-python ex1_burgers.py --subsample 1 --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01 --batch-size 4
+python ex1_burgers.py --subsample 1 --attention-type 'galerkin' --xavier-init 0.01 --diagonal-weight 0.01 --batch-size 4
+```
+
+Note that we add a diagonal matrix to the Xavier initializations of the `W^Q, W^K, W^V` matrices (about 30%-1000% better than those without depending on other settings). If we want to try the standard softmax normalization `Softmax(QK^T/sqrt{d})V`, conventional layer normalization application scheme, default Xavier initialization (the result is not very good...).
+```bash
+python ex1_burgers.py --attention-type 'softmax' --layer-norm --xavier-init 1.0 --diagonal-weight 0.0
 ```
 
 Subsample 4, i.e., `n=2048`.
 
 ```bash
-python ex1_burgers.py --subsample 4 --attention-type 'fourier' --xavier-init 0.001 --diag-weight 0.01  --ffn-dropout 0.05 --batch-size 4
+python ex1_burgers.py --subsample 4 --attention-type 'fourier' --xavier-init 0.001 --diagonal-weight 0.01  --ffn-dropout 0.05 --batch-size 4
 ```
 
 ```bash
-python ex1_burgers.py --subsample 4 --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01 --batch-size 4
+python ex1_burgers.py --subsample 4 --attention-type 'galerkin' --xavier-init 0.01 --diagonal-weight 0.01 --batch-size 4
 ```
 
 
 
-# Example 2:
+# Example 2 interface Darcy:
 `141x141` fine grid, `43x43` coarse grid: 
 
 ```bash
-python ex2_darcy.py --subsample-attn 10 --subsample-nodes 3 --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01
+python ex2_darcy.py --subsample-attn 10 --subsample-nodes 3 --attention-type 'galerkin' --xavier-init 0.01 --diagonal-weight 0.01
 ```
 
 ```bash
-python ex2_darcy.py --subsample-attn 10 --subsample-nodes 3 --attention-type 'fourier' --xavier-init 0.01 --diag-weight 0.01 --ffn-dropout 0.1 --encoder-dropout 0.1 --lr 0.0005
+python ex2_darcy.py --subsample-attn 10 --subsample-nodes 3 --attention-type 'fourier' --xavier-init 0.01 --diagonal-weight 0.01 --ffn-dropout 0.1 --encoder-dropout 0.1 --lr 0.0005
 ```
 
 `211x211` fine grid, `61x61` coarse grid:
 ```bash
-python ex2_darcy.py --subsample-attn 7 --subsample-nodes 2 --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01 --ffn-dropout 0.05 --encoder-dropout 0.1
+python ex2_darcy.py --subsample-attn 7 --subsample-nodes 2 --attention-type 'galerkin' --xavier-init 0.01 --diagonal-weight 0.01 --ffn-dropout 0.05 --encoder-dropout 0.1
 ```
 
 Using Fourier attention is not recommended (slow due to the `n^2`-complexity of local attention):
 ```bash
-python ex2_darcy.py --subsample-attn 7 --subsample-nodes 2 --attention-type 'fourier' --xavier-init 0.001 --diag-weight 0.01 --ffn-dropout 0.1 --encoder-dropout 0.05 --lr 0.0005
+python ex2_darcy.py --subsample-attn 7 --subsample-nodes 2 --attention-type 'fourier' --xavier-init 0.001 --diagonal-weight 0.01 --ffn-dropout 0.1 --encoder-dropout 0.05 --lr 0.0005
 ```
 
-# Example 3:
+# Example 3 inverse Darcy:
 To add noise in both train and test data, just use `--noise $NOISE`. `0.1` means `10%` noise, etc.
 
 On a `211x211` fine grid, `71x71` coarse grid:
 ```bash
-python ex3_darcy_inv.py --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01
+python ex3_darcy_inv.py --attention-type 'galerkin' --xavier-init 0.01 --diagonal-weight 0.01
 ```
 
 ```bash
-python ex3_darcy_inv.py --attention-type 'fourier' --xavier-init 0.01 --diag-weight 0.01 --ffn-dropout 0.1 --lr 0.0005
+python ex3_darcy_inv.py --attention-type 'fourier' --xavier-init 0.01 --diagonal-weight 0.01 --ffn-dropout 0.1 --lr 0.0005
 ```
 
 `141x141` fine grid, `36x36` coarse grid:
 ```bash
-python ex3_darcy_inv.py --subsample-attn 12 --subsample-nodes 3 --attention-type 'galerkin' --xavier-init 0.01 --diag-weight 0.01
+python ex3_darcy_inv.py --subsample-attn 12 --subsample-nodes 3 --attention-type 'galerkin' --xavier-init 0.01 --diagonal-weight 0.01
 ```
 
 ```bash
-python ex3_darcy_inv.py --subsample-attn 12 --subsample-nodes 3 --attention-type 'fourier' --xavier-init 0.01 --diag-weight 0.01 --lr 0.001
+python ex3_darcy_inv.py --subsample-attn 12 --subsample-nodes 3 --attention-type 'fourier' --xavier-init 0.01 --diagonal-weight 0.01 --lr 0.001
 ```
 
 

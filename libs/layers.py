@@ -613,18 +613,18 @@ class SimpleAttention(nn.Module):
         - softmax: classic softmax attention
 
     In this implementation, output is (N, L, E).
-    batch_first will be added in the next PyTorch: https://github.com/pytorch/pytorch/pull/55285
+    batch_first will be added in the next version of PyTorch: https://github.com/pytorch/pytorch/pull/55285
 
     Reference: code base modified from
     https://nlp.seas.harvard.edu/2018/04/03/attention.html
-    - added xavier init
-    - added layer norm switch
+    - added xavier init gain
+    - added layer norm <-> attn norm switch
     - added diagonal init
 
     In https://github.com/lucidrains/linear-attention-transformer/blob/master/linear_attention_transformer/linear_attention_transformer.py
-    the linear attention in each head is implemented as an einsum
-    context = einsum('bhnd,bhne->bhde', k, v)
-    attn = einsum('bhnd,bhde->bhne', q, context)
+    the linear attention in each head is implemented as an Einstein sum
+    attn_matrix = torch.einsum('bhnd,bhne->bhde', k, v)
+    attn = torch.einsum('bhnd,bhde->bhne', q, attn_matrix)
     return attn.reshape(*q.shape)
     here in our implementation this is achieved by a slower transpose+matmul
     but can conform with the template Harvard NLP gave

@@ -532,7 +532,7 @@ class DarcyDataset(Dataset):
         # TODO: if processing inverse before normalizer, shapes will be unmatched
         if self.inverse_problem:
             nodes, targets = targets, nodes
-            if self.subsample_inverse > 1:
+            if self.subsample_inverse is not None and self.subsample_inverse > 1:
                 n_grid = int(((self.n_grid_fine - 1)/self.subsample_nodes) + 1)
                 n_grid_inv = int(
                     ((self.n_grid_fine - 1)/self.subsample_inverse) + 1)

@@ -386,10 +386,10 @@ def showcontour(z, **kwargs):
                        colorscale='RdYlBu',
                        line_smoothing=0.85,
                        line_width=0.1,
-                    #    contours=dict(
-                    #        coloring='heatmap',
-                    #        showlabels=True,
-                    #    )
+                       contours=dict(
+                           coloring='heatmap',
+                        #    showlabels=True,
+                       )
                        )
     fig = go.Figure(data=uplot,
                     layout={'xaxis': {'title': 'x-label',
@@ -498,7 +498,7 @@ def get_args_1d():
                         help='input attention type for encoders (possile: fourier (alias integral, local), galerkin (alias global), softmax (official PyTorch implementation), linear (standard Q(K^TV) with softmax), default: fourier)')
     parser.add_argument('--xavier-init', type=float, default=0.01, metavar='xavier_init',
                         help='input Xavier initialization strength for Q,K,V weights (default: 0.01)')
-    parser.add_argument('--diag-weight', type=float, default=0.01, metavar='diag_weight',
+    parser.add_argument('--diagonal-weight', type=float, default=0.01, metavar='diagonal weight',
                         help='input diagonal weight initialization strength for Q,K,V weights (default: 0.01)')
     parser.add_argument('--ffn-dropout', type=float, default=0.0, metavar='ffn_dropout',
                         help='dropout for the FFN in attention (default: 0.0)')
@@ -557,7 +557,7 @@ def get_args_2d(subsample_nodes=3,
                         help=f'strength of noise imposed (default: {noise})')
     parser.add_argument('--xavier-init', type=float, default=1e-2, metavar='xavier_init',
                         help='input Xavier initialization strength for Q,K,V weights (default: 0.01)')
-    parser.add_argument('--diag-weight', type=float, default=1e-2, metavar='diag_weight',
+    parser.add_argument('--diagonal-weight', type=float, default=1e-2, metavar='diagonal weight',
                         help='input diagonal weight initialization strength for Q,K,V weights (default: 0.01)')
     parser.add_argument('--ffn-dropout', type=float, default=ffn_dropout, metavar='ffn_dropout',
                         help=f'dropout for the FFN in attention (default: {ffn_dropout})')

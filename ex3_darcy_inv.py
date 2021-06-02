@@ -23,6 +23,9 @@ def main():
                                  train_data=True,
                                  noise=args.noise,
                                  train_len=1024,)
+    bsz = 2 if args.subsample_attn <=7 else args.batch_size
+    train_loader = DataLoader(train_dataset, batch_size=bsz, shuffle=True,
+                              drop_last=True, **kwargs)
 
     valid_dataset = DarcyDataset(data_path=test_path,
                                  normalizer_x=train_dataset.normalizer_x,
@@ -34,9 +37,6 @@ def main():
                                  train_data=False,
                                  noise=args.noise,
                                  valid_len=100,)
-    bsz = 2 if args.subsample_attn <=7 else args.batch_size
-    train_loader = DataLoader(train_dataset, batch_size=bsz, shuffle=True,
-                              drop_last=True, **kwargs)
     valid_loader = DataLoader(valid_dataset, batch_size=args.val_batch_size, shuffle=False,
                               drop_last=False, **kwargs)
 
@@ -106,7 +106,7 @@ def main():
     scheduler = OneCycleLR(optimizer, max_lr=lr, div_factor=1e4, final_div_factor=1e4,
                            steps_per_epoch=len(train_loader), epochs=epochs)
 
-    loss_func = WeightedL2Loss2d(regularizer=False, h=h, gamma=0.0)
+    loss_func = WeightedL2Loss2d(regularizer=False, h=h)
 
     metric_func = WeightedL2Loss2d(regularizer=False, h=h)
 
