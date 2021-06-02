@@ -58,7 +58,8 @@ def main():
         elem = train_dataset.elem
         node = train_dataset.pos
         ah = a[..., 0]
-        uh = F.interpolate(u[..., 0].unsqueeze(1), size=(
+        uh = train_dataset.normalizer_x.inverse_transform(u)
+        uh = F.interpolate(uh[..., 0].unsqueeze(1), size=(
             n_grid_c, n_grid_c), mode='bilinear', align_corners=True)
         ah = ah[idx].numpy().reshape(-1)
         uh = uh[idx].numpy().reshape(-1)

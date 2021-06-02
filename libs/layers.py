@@ -87,6 +87,7 @@ class Conv2dResBlock(nn.Module):
     Conv2d + a residual block
     https://github.com/pytorch/vision/blob/master/torchvision/models/resnet.py
     Modified from ResNet's basic block, one conv less, no batchnorm
+    No batchnorm
     '''
 
     def __init__(self, in_dim, out_dim,
@@ -100,6 +101,7 @@ class Conv2dResBlock(nn.Module):
                  basic_block=False,
                  activation_type='silu'):
         super(Conv2dResBlock, self).__init__()
+
         activation_type = default(activation_type, 'silu')
         self.activation = nn.SiLU() if activation_type == 'silu' else nn.ReLU()
         self.add_res = residual
@@ -618,6 +620,14 @@ class SimpleAttention(nn.Module):
     - added xavier init
     - added layer norm switch
     - added diagonal init
+
+    In https://github.com/lucidrains/linear-attention-transformer/blob/master/linear_attention_transformer/linear_attention_transformer.py
+    the linear attention in each head is implemented as an einsum
+    context = einsum('bhnd,bhne->bhde', k, v)
+    attn = einsum('bhnd,bhde->bhne', q, context)
+    return attn.reshape(*q.shape)
+    here in our implementation this is achieved by a slower transpose+matmul
+    but can conform with the template Harvard NLP gave
     '''
 
     def __init__(self, n_head, d_model,
@@ -944,7 +954,8 @@ class SpectralConv2d(nn.Module):
         super(SpectralConv2d, self).__init__()
 
         '''
-        Modified Zongyi Li's SpectralConv2d code
+        Modified Zongyi Li's SpectralConv2d PyTorch 1.6 code
+        using only real weights
         https://github.com/zongyi-li/fourier_neural_operator/blob/master/fourier_2d.py
         '''
         self.in_dim = in_dim

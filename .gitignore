@@ -135,3 +135,4 @@ dmypy.json
 *.txt
 *.pkl
 darcy_inverse_141_36_paper_ft.py
+test_ex3_darcy_inv.py

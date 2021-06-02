@@ -99,8 +99,8 @@ ex3_darcy_inv:
   xavier_init: 0.01
   diagonal_weight: 0.01
   symmetric_init: False
-  layer_norm: True
-  attn_norm: False
+  layer_norm: False
+  attn_norm: True
   norm_eps: 0.0000001
   batch_norm: False
   return_attn_weight: False

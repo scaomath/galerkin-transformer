@@ -9,7 +9,7 @@ import copy
 import os
 import sys
 from collections import defaultdict
-from typing import Any, Optional
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -23,9 +23,9 @@ SRC_ROOT = os.path.dirname(current_path)
 sys.path.append(SRC_ROOT)
 
 ADDITIONAL_ATTR = ['normalizer', 'raw_laplacian', 'return_latent',
-                   'residual_type', 'norm_type', 'boundary_condition',
+                   'residual_type', 'norm_type', 'norm_eps', 'boundary_condition',
                    'upscaler_size', 'downscaler_size', 'spacial_dim', 'spacial_fc',
-                   'regressor_activation', 'attn_activation', 'norm_eps',
+                   'regressor_activation', 'attn_activation', 
                    'downscaler_activation', 'upscaler_activation',
                    'encoder_dropout', 'decoder_dropout', 'ffn_dropout']
 
@@ -159,7 +159,6 @@ class TransformerEncoderLayer(nn.Module):
                  ):
         super(TransformerEncoderLayer, self).__init__()
         self.self_attn = MultiheadAttention(d_model, nhead, dropout=dropout)
-        # Implementation of Feedforward model
         self.linear1 = nn.Linear(d_model, dim_feedforward)
         self.dropout = nn.Dropout(dropout)
         self.linear2 = nn.Linear(dim_feedforward, d_model)
@@ -227,7 +226,6 @@ class TransformerEncoderWrapper(nn.Module):
         Modified from pytorch official implementation
         TransformerEncoder's input and output shapes follow
         those of the encoder_layer fed into as this is essentially a wrapper
-
 
     Args:
         encoder_layer: an instance of the TransformerEncoderLayer() class (required).
