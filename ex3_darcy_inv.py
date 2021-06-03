@@ -123,7 +123,7 @@ def main():
                        result_name=result_name,
                        device=device)
 
-    model = torch.load(torch.load(os.path.join(MODEL_PATH, model_name)))
+    model = torch.load(os.path.join(MODEL_PATH, model_name))
     model.eval()
     val_metric = validate_epoch_darcy(model, metric_func, valid_loader, device)
     print(f"\nBest model's validation metric in this run: {val_metric}")

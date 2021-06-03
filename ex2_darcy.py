@@ -69,7 +69,11 @@ def main():
     config['downscaler_size'] = downsample
     config['upscaler_size'] = upsample
     config['attn_norm'] = not args.layer_norm
-    config['norm_eps'] = 1e-7 if n_grid < 211 else config['norm_eps']
+    if config['attention_type'] == 'fourier' or n_grid < 211:
+        config['norm_eps'] = 1e-7
+    elif config['attention_type'] == 'galerkin' and n_grid >= 211:
+        config['norm_eps'] = 1e-5
+
     for arg in vars(args):
         if arg in config.keys():
             config[arg] = getattr(args, arg)
@@ -121,7 +125,7 @@ def main():
                        result_name=result_name,
                        device=device)
 
-    model = torch.load(torch.load(os.path.join(MODEL_PATH, model_name)))
+    model = torch.load(os.path.join(MODEL_PATH, model_name))
     model.eval()
     val_metric = validate_epoch_darcy(model, metric_func, valid_loader, device)
     print(f"\nBest model's validation metric in this run: {val_metric}")

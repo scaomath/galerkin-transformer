@@ -4,11 +4,13 @@
 [![Pytorch 1.8](https://img.shields.io/badge/pytorch-1.8-blue.svg)](https://pytorch.org/)
 
 TL;DR:
-The new attention operator is `(QK^T)V` or `Q(K^TV)`, whichever doing matmul gets the layer normalization, i.e., `Q, K` get layer normalized in the local attention, as for `K, V` in the global attention. No softmax, no layer normalization is applied afterward. This is called a scale-preserving simple attention. The feature extractor is a simple FFN or an interpolation-based CNN, the decoder is the spectral convolution from the best operator learner to-date FNO in [*Li et al 2020*](https://github.com/zongyi-li/fourier_neural_operator) if the target is smooth, or just pointwise FFN if otherwise. The resulting network is extremely powerful in learning PDE-related operators (energy decay, inverse coefficient identification).
+The new attention operator is `(QK^T)V` or `Q(K^TV)`, whichever doing matmul gets the layer normalization, i.e., `Q, K` get layer normalized in the local attention, as for `K, V` in the global attention. No softmax, no layer normalization is applied afterward. This is called a scale-preserving simple attention. The feature extractor is a simple FFN or an interpolation-based CNN, the decoder is the spectral convolution re-implemented using only real parameters from the best operator learner to-date Fourier Neural Operator (FNO) in [*Li et al 2020*](https://github.com/zongyi-li/fourier_neural_operator) if the target is smooth, or just a pointwise FFN if otherwise. The resulting network is extremely powerful in learning PDE-related operators (energy decay, inverse coefficient identification).
 
 For how to train our models please refer to [`training.md`](./training.md).
 
-Even though everyone is transformer'ing, the mathematics behind the attention mechanism is not well understood. We have also shown that the global attention (Galerkin-type if the softmax is removed) is nothing but a Petrov-Galerkin projection under a Hilbertian setup, using a method commonly known as ''mixed method'' in the finite element analysis community. The approximation is not discretization-tied, in that (1) the dimensions of the approximation spaces are not tied to the geometry as in the traditional finite element analysis (or finite difference, spectral methods, radial basis, etc); (2) the approximation spaces are being dynamically updated by the nonlinear universal approximator due to the presence of the positional encodings in the latent representations. 
+If just wanting to see what is it like for the models to perform on the unseen test set, please refer to [evaluation](#evaluation-notebooks).
+
+Even though everyone is transformer'ing, the mathematics behind the attention mechanism is not well understood. We have also shown that the global attention (Galerkin-type if the softmax is removed) is nothing but a Petrov-Galerkin projection under a Hilbertian setup. We use a method commonly known as ''mixed method'' in the finite element analysis community that is used to solve fluid/electromagnetics problems. Unlike finite element methods, in an attention-based operator learner the approximation is not discretization-tied, in that (1) the dimensions of the approximation spaces are not tied to the geometry as in the traditional finite element analysis (or finite difference, spectral methods, radial basis, etc); (2) the approximation spaces are being dynamically updated by the nonlinear universal approximator due to the presence of the positional encodings in the latent representations. 
 
 For details please refer to: [https://arxiv.org/abs/2105.14995](https://arxiv.org/abs/2105.14995)
 ```latex
@@ -127,9 +129,10 @@ python ex3_darcy_inv.py --subsample-attn 12 --subsample-nodes 3 --attention-type
 For more choices of arguments, please refer to [Example 3 in `training.md`](./training.md#Example-3-inverse-Darcy).
 
 # Evaluation notebooks
-
+Please download the pretrained model's `.pt` files from Releases and put them in the `./models` folder.
 - [Example 1](./ex1_burgers_eval.ipynb)
 - [Example 2](./ex2_darcy_eval.ipynb)
+- [Example 3](./ex3_darcy_inv_eval.ipynb)
 
 
 # Memory and speed profiling using `autograd.profiler`

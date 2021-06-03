@@ -54,7 +54,7 @@ ex2_darcy:
   symmetric_init: False
   layer_norm: False
   attn_norm: True
-  norm_eps: 0.00001
+  norm_eps: 0.0000001
   batch_norm: False
   return_attn_weight: False
   return_latent: False
@@ -81,8 +81,8 @@ ex2_darcy:
 
 
 ex3_darcy_inv:
-  subsample_nodes: 2
-  subsample_attn: 6
+  subsample_nodes: 3
+  subsample_attn: 12
   gamma: 0.0
   noise: 0.01
   inverse: True
