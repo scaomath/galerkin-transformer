@@ -126,7 +126,10 @@ python ex3_darcy_inv.py --subsample-attn 12 --subsample-nodes 3 --attention-type
 ```
 For more choices of arguments, please refer to [Example 3 in `training.md`](./training.md#Example-3-inverse-Darcy).
 
-# Evaluation
+# Evaluation notebooks
+
+- [Example 1](./ex1_burgers_eval.ipynb)
+- [Example 2](./ex2_darcy_eval.ipynb)
 
 
 # Memory and speed profiling using `autograd.profiler`
