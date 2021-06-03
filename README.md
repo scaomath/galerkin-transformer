@@ -126,6 +126,8 @@ python ex3_darcy_inv.py --subsample-attn 12 --subsample-nodes 3 --attention-type
 ```
 For more choices of arguments, please refer to [Example 3 in `training.md`](./training.md#Example-3-inverse-Darcy).
 
+# Evaluation
+
 
 # Memory and speed profiling using `autograd.profiler`
 Using CUDA, Fourier Transformer features an over 40% reduction in `self_cuda_memory_usage` versus the standard softmax normalized transformers, and Galerkin Transformer's the backpropagation speed has a 20% to 100% increase over the standard linearized transformers. If no GPU is available please enable the `--no-cuda` switch.

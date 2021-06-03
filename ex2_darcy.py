@@ -69,6 +69,7 @@ def main():
     config['downscaler_size'] = downsample
     config['upscaler_size'] = upsample
     config['attn_norm'] = not args.layer_norm
+    config['norm_eps'] = 1e-7 if n_grid < 211 else config['norm_eps']
     for arg in vars(args):
         if arg in config.keys():
             config[arg] = getattr(args, arg)
@@ -115,11 +116,12 @@ def main():
                        epochs=epochs,
                        patience=None,
                        tqdm_mode='epoch',
+                       save_mode='entire',
                        model_name=model_name,
                        result_name=result_name,
                        device=device)
 
-    model.load_state_dict(torch.load(os.path.join(MODEL_PATH, model_name)))
+    model = torch.load(torch.load(os.path.join(MODEL_PATH, model_name)))
     model.eval()
     val_metric = validate_epoch_darcy(model, metric_func, valid_loader, device)
     print(f"\nBest model's validation metric in this run: {val_metric}")

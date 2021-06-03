@@ -33,14 +33,17 @@ except ImportError as e:
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 SRC_ROOT = os.path.dirname(current_path)
-MODEL_PATH = default(os.environ.get('MODEL_PATH'), os.path.join(SRC_ROOT, 'models'))
-DATA_PATH = default(os.environ.get('DATA_PATH'), os.path.join(SRC_ROOT, 'data'))
-FIG_PATH = default(os.environ.get('FIG_PATH'), 
+MODEL_PATH = default(os.environ.get('MODEL_PATH'),
+                     os.path.join(SRC_ROOT, 'models'))
+DATA_PATH = default(os.environ.get('DATA_PATH'),
+                    os.path.join(SRC_ROOT, 'data'))
+FIG_PATH = default(os.environ.get('FIG_PATH'),
                    os.path.join(os.path.dirname(SRC_ROOT), 'figures'))
 EPOCH_SCHEDULERS = ['ReduceLROnPlateau', 'StepLR', 'MultiplicativeLR',
                     'MultiStepLR', 'ExponentialLR', 'LambdaLR']
 PI = math.pi
 SEED = default(os.environ.get('SEED'), 1127802)
+
 
 def clones(module, N):
     '''
@@ -388,7 +391,7 @@ def showcontour(z, **kwargs):
                        line_width=0.1,
                        contours=dict(
                            coloring='heatmap',
-                        #    showlabels=True,
+                           #    showlabels=True,
                        )
                        )
     fig = go.Figure(data=uplot,
@@ -704,6 +707,7 @@ def validate_epoch_darcy(model, metric_func, valid_loader, device):
 
     return dict(metric=np.mean(metric_val, axis=0))
 
+
 def run_train(model, loss_func, metric_func,
               train_loader, valid_loader,
               optimizer, lr_scheduler,
@@ -717,7 +721,7 @@ def run_train(model, loss_func, metric_func,
               grad_clip=0.999,
               start_epoch: int = 0,
               model_save_path=MODEL_PATH,
-              save_mode='state_dict', # 'state_dict' or 'entire'
+              save_mode='state_dict',  # 'state_dict' or 'entire'
               model_name='model.pt',
               result_name='result.pt'):
     loss_train = []
@@ -794,7 +798,8 @@ def run_train(model, loss_func, metric_func,
                         torch.save(model.state_dict(), os.path.join(
                             model_save_path, model_name))
                     else:
-                        torch.save(model, os.path.join(model_save_path, model_name))
+                        torch.save(model, os.path.join(
+                            model_save_path, model_name))
                     best_model_state_dict = {
                         k: v.to('cpu') for k, v in model.state_dict().items()}
                     best_model_state_dict = OrderedDict(best_model_state_dict)
