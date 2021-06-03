@@ -855,7 +855,7 @@ class WeightedL2Loss(_WeightedLoss):
                  return_norm=True,
                  orthogonal_reg=False,
                  orthogonal_mode='global',
-                 delta=1e-4,  # strength of \|y^T y - I\| or \|y y^T - I\|
+                 delta=1e-4,
                  noise=0.0,
                  debug=False
                  ):
@@ -946,7 +946,6 @@ class WeightedL2Loss(_WeightedLoss):
             regularizer = torch.tensor(
                 [0.0], requires_grad=True, device=preds.device)
 
-        # TODO: adding this regularizer on orthogonality
         if self.orthogonal_reg > 0 and preds_latent:
             ortho = []
             for y_lat in preds_latent:

@@ -83,7 +83,7 @@ def main():
         f"\nModel: {model.__name__}\t Number of params: {get_num_params(model)}")
 
     model_name, result_name = get_model_name(model='darcy',
-                                             num_ft_layers=config['num_ft_layers'],
+                                             num_encoder_layers=config['num_encoder_layers'],
                                              n_hidden=config['n_hidden'],
                                              attention_type=config['attention_type'],
                                              layer_norm=config['layer_norm'],

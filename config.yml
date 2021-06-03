@@ -6,7 +6,7 @@ ex1_burgers:
   n_targets: 1
   n_hidden: 96
   num_feat_layers: 0
-  num_ft_layers: 4
+  num_encoder_layers: 4
   n_head: 1
   pred_len: 0
   n_freq_targets: 0
@@ -44,7 +44,7 @@ ex2_darcy:
   n_targets: 1
   n_hidden: 128
   num_feat_layers: 0
-  num_ft_layers: 6
+  num_encoder_layers: 6
   n_head: 4
   dim_feedforward: 256
   feat_extract_type: null
@@ -54,7 +54,7 @@ ex2_darcy:
   symmetric_init: False
   layer_norm: False
   attn_norm: True
-  norm_eps: 0.0000001
+  norm_eps: 0.00001
   batch_norm: False
   return_attn_weight: False
   return_latent: False
@@ -91,7 +91,7 @@ ex3_darcy_inv:
   n_targets: 1
   n_hidden: 192
   num_feat_layers: 0
-  num_ft_layers: 6
+  num_encoder_layers: 6
   n_head: 4
   dim_feedforward: 384
   feat_extract_type: null

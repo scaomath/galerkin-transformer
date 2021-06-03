@@ -446,7 +446,7 @@ def showresult(result=dict(), title=None, result_type='convergence',
 
 
 def get_model_name(model='burgers',
-                   num_ft_layers=4,
+                   num_encoder_layers=4,
                    n_hidden=96,
                    attention_type='fourier',
                    layer_norm=True,
@@ -460,15 +460,15 @@ def get_model_name(model='burgers',
         model_name += 'inv_'
     model_name += str(grid_size)+'_'
     if attention_type == 'fourier':
-        attn_str = f'{num_ft_layers}ft_'
+        attn_str = f'{num_encoder_layers}ft_'
     elif attention_type == 'galerkin':
-        attn_str = f'{num_ft_layers}gt_'
+        attn_str = f'{num_encoder_layers}gt_'
     elif attention_type == 'linear':
-        attn_str = f'{num_ft_layers}lt_'
+        attn_str = f'{num_encoder_layers}lt_'
     elif attention_type == 'softmax':
-        attn_str = f'{num_ft_layers}st_'
+        attn_str = f'{num_encoder_layers}st_'
     else:
-        attn_str = f'{num_ft_layers}att_'
+        attn_str = f'{num_encoder_layers}att_'
     model_name += attn_str
     model_name += f'{n_hidden}d_'
     ln_str = 'ln_' if layer_norm else 'qkv_'
@@ -717,6 +717,7 @@ def run_train(model, loss_func, metric_func,
               grad_clip=0.999,
               start_epoch: int = 0,
               model_save_path=MODEL_PATH,
+              save_mode='state_dict', # 'state_dict' or 'entire'
               model_name='model.pt',
               result_name='result.pt'):
     loss_train = []
@@ -731,6 +732,7 @@ def run_train(model, loss_func, metric_func,
     end_epoch = start_epoch + epochs
     best_val_metric = -np.inf if mode == 'max' else np.inf
     best_val_epoch = None
+    save_mode = 'state_dict' if save_mode is None else save_mode
     stop_counter = 0
     is_epoch_scheduler = any(s in str(lr_scheduler.__class__)
                              for s in EPOCH_SCHEDULERS)
@@ -788,8 +790,11 @@ def run_train(model, loss_func, metric_func,
                     best_val_epoch = epoch
                     best_val_metric = val_metric
                     stop_counter = 0
-                    torch.save(model.state_dict(), os.path.join(
-                        model_save_path, model_name))
+                    if save_mode == 'state_dict':
+                        torch.save(model.state_dict(), os.path.join(
+                            model_save_path, model_name))
+                    else:
+                        torch.save(model, os.path.join(model_save_path, model_name))
                     best_model_state_dict = {
                         k: v.to('cpu') for k, v in model.state_dict().items()}
                     best_model_state_dict = OrderedDict(best_model_state_dict)

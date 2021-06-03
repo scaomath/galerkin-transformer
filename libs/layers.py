@@ -338,10 +338,98 @@ class Conv2dEncoder(nn.Module):
         return out
 
 
+# class Interp2dEncoder(nn.Module):
+#     r'''
+#     Using Interpolate instead of avg pool
+#     interp dim hard coded or using a factor
+#     '''
+
+#     def __init__(self, in_dim: int,
+#                  out_dim: int,
+#                  kernel_size: int = 3,
+#                  stride: int = 1,
+#                  padding: int = 1,
+#                  dilation: int = 1,
+#                  interp_size=None,
+#                  residual=False,
+#                  activation_type='silu',
+#                  dropout=0.1,
+#                  debug=False):
+#         super(Interp2dEncoder, self).__init__()
+
+#         conv_dim0 = out_dim // 3
+#         conv_dim1 = out_dim // 3
+#         conv_dim2 = int(out_dim - conv_dim0 - conv_dim1)
+#         padding1 = padding//2 if padding//2 >= 1 else 1
+#         padding2 = padding//4 if padding//4 >= 1 else 1
+#         activation_type = default(activation_type, 'silu')
+#         self.conv0 = Conv2dResBlock(in_dim, out_dim, kernel_size=kernel_size,
+#                                     padding=padding, activation_type=activation_type,
+#                                     dropout=dropout,
+#                                     residual=residual)
+#         self.conv1 = Conv2dResBlock(out_dim, conv_dim0, kernel_size=kernel_size,
+#                                     padding=padding1,
+#                                     stride=stride, residual=residual,
+#                                     dropout=dropout,
+#                                     activation_type=activation_type,)
+#         self.conv2 = Conv2dResBlock(conv_dim0, conv_dim1, kernel_size=kernel_size,
+#                                     dilation=dilation,
+#                                     padding=padding2, residual=residual,
+#                                     dropout=dropout,
+#                                     activation_type=activation_type,)
+#         self.conv3 = Conv2dResBlock(conv_dim1, conv_dim2,
+#                                     kernel_size=kernel_size,
+#                                     residual=residual,
+#                                     dropout=dropout,
+#                                     activation_type=activation_type,)
+#         if isinstance(interp_size[0], float) and isinstance(interp_size[1], float):
+#             self.interp0 = lambda x: F.interpolate(x, scale_factor=interp_size[0],
+#                                                    mode='bilinear',
+#                                                    recompute_scale_factor=True,
+#                                                    align_corners=True)
+#             self.interp1 = lambda x: F.interpolate(x, scale_factor=interp_size[1],
+#                                                    mode='bilinear',
+#                                                    recompute_scale_factor=True,
+#                                                    align_corners=True,)
+#         elif isinstance(interp_size[0], tuple) and isinstance(interp_size[1], tuple):
+#             self.interp0 = lambda x: F.interpolate(x, size=interp_size[0],
+#                                                    mode='bilinear',
+#                                                    align_corners=True)
+#             self.interp1 = lambda x: F.interpolate(x, size=interp_size[1],
+#                                                    mode='bilinear',
+#                                                    align_corners=True,)
+#         elif interp_size is None:
+#             self.interp0 = Identity()
+#             self.interp1 = Identity()
+#         else:
+#             raise NotImplementedError("interpolation size not implemented.")
+#         self.activation = nn.SiLU() if activation_type == 'silu' else nn.ReLU()
+#         # self.activation = nn.LeakyReLU() # leakyrelu decreased performance 10 times?
+#         self.add_res = residual
+#         self.debug = debug
+
+#     def forward(self, x):
+
+#         x = self.conv0(x)
+#         x = self.interp0(x)
+#         x = self.activation(x)
+
+#         x1 = self.conv1(x)
+#         x2 = self.conv2(x1)
+#         x3 = self.conv3(x2)
+#         out = torch.cat([x1, x2, x3], dim=1)
+
+#         if self.add_res:
+#             out += x
+#         out = self.interp1(out)
+#         out = self.activation(out)
+#         return out
+
 class Interp2dEncoder(nn.Module):
     r'''
     Using Interpolate instead of avg pool
     interp dim hard coded or using a factor
+    old code uses lambda and cannot be pickled
     '''
 
     def __init__(self, in_dim: int,
@@ -363,6 +451,7 @@ class Interp2dEncoder(nn.Module):
         padding1 = padding//2 if padding//2 >= 1 else 1
         padding2 = padding//4 if padding//4 >= 1 else 1
         activation_type = default(activation_type, 'silu')
+        self.interp_size = interp_size
         self.conv0 = Conv2dResBlock(in_dim, out_dim, kernel_size=kernel_size,
                                     padding=padding, activation_type=activation_type,
                                     dropout=dropout,
@@ -382,46 +471,28 @@ class Interp2dEncoder(nn.Module):
                                     residual=residual,
                                     dropout=dropout,
                                     activation_type=activation_type,)
-        if isinstance(interp_size[0], float) and isinstance(interp_size[1], float):
-            self.interp0 = lambda x: F.interpolate(x, scale_factor=interp_size[0],
-                                                   mode='bilinear',
-                                                   recompute_scale_factor=True,
-                                                   align_corners=True)
-            self.interp1 = lambda x: F.interpolate(x, scale_factor=interp_size[1],
-                                                   mode='bilinear',
-                                                   recompute_scale_factor=True,
-                                                   align_corners=True,)
-        elif isinstance(interp_size[0], tuple) and isinstance(interp_size[1], tuple):
-            self.interp0 = lambda x: F.interpolate(x, size=interp_size[0],
-                                                   mode='bilinear',
-                                                   align_corners=True)
-            self.interp1 = lambda x: F.interpolate(x, size=interp_size[1],
-                                                   mode='bilinear',
-                                                   align_corners=True,)
-        elif interp_size is None:
-            self.interp0 = Identity()
-            self.interp1 = Identity()
-        else:
-            raise NotImplementedError("interpolation size not implemented.")
         self.activation = nn.SiLU() if activation_type == 'silu' else nn.ReLU()
-        # self.activation = nn.LeakyReLU() # leakyrelu decreased performance 10 times?
         self.add_res = residual
         self.debug = debug
 
     def forward(self, x):
-
         x = self.conv0(x)
-        x = self.interp0(x)
+        x = F.interpolate(x, scale_factor=self.interp_size[0],
+                          mode='bilinear',
+                          recompute_scale_factor=True,
+                          align_corners=True)
         x = self.activation(x)
-
         x1 = self.conv1(x)
         x2 = self.conv2(x1)
         x3 = self.conv3(x2)
         out = torch.cat([x1, x2, x3], dim=1)
-
         if self.add_res:
             out += x
-        out = self.interp1(out)
+
+        out = F.interpolate(out, scale_factor=self.interp_size[1],
+                            mode='bilinear',
+                            recompute_scale_factor=True,
+                            align_corners=True,)
         out = self.activation(out)
         return out
 
@@ -473,11 +544,73 @@ class DeConv2dBlock(nn.Module):
         return x
 
 
+# class Interp2dUpsample(nn.Module):
+#     '''
+#     interp->conv2d->interp
+#     or
+#     identity
+#     '''
+
+#     def __init__(self, in_dim: int,
+#                  out_dim: int,
+#                  kernel_size: int = 3,
+#                  padding: int = 1,
+#                  residual=False,
+#                  conv_block=True,
+#                  interp_mode='bilinear',
+#                  interp_size=None,
+#                  activation_type='silu',
+#                  dropout=0.1,
+#                  debug=False):
+#         super(Interp2dUpsample, self).__init__()
+#         activation_type = default(activation_type, 'silu')
+#         self.activation = nn.SiLU() if activation_type == 'silu' else nn.ReLU()
+#         self.dropout = nn.Dropout(dropout)
+#         if conv_block:
+#             self.conv = nn.Sequential(Conv2dResBlock(
+#                 in_dim, out_dim,
+#                 kernel_size=kernel_size,
+#                 padding=padding,
+#                 residual=residual,
+#                 dropout=dropout,
+#                 activation_type=activation_type),
+#                 self.dropout,
+#                 self.activation)
+#         self.conv_block = conv_block
+#         if isinstance(interp_size[0], float) and isinstance(interp_size[1], float):
+#             self.interp0 = lambda x: F.interpolate(x, scale_factor=interp_size[0],
+#                                                    mode=interp_mode,
+#                                                    recompute_scale_factor=True,
+#                                                    align_corners=True)
+#             self.interp1 = lambda x: F.interpolate(x, scale_factor=interp_size[1],
+#                                                    mode=interp_mode,
+#                                                    recompute_scale_factor=True,
+#                                                    align_corners=True)
+#         elif isinstance(interp_size[0], tuple) and isinstance(interp_size[1], tuple):
+#             self.interp0 = lambda x: F.interpolate(x, size=interp_size[0],
+#                                                    mode=interp_mode,
+#                                                    align_corners=True)
+#             self.interp1 = lambda x: F.interpolate(x, size=interp_size[1],
+#                                                    mode=interp_mode,
+#                                                    align_corners=True)
+#         elif interp_size is None:
+#             self.interp0 = Identity()
+#             self.interp1 = Identity()
+
+#         self.debug = debug
+
+#     def forward(self, x):
+#         x = self.interp0(x)
+#         if self.conv_block:
+#             x = self.conv(x)
+#         x = self.interp1(x)
+#         return x
+
 class Interp2dUpsample(nn.Module):
     '''
-    interp->conv2d->interp
-    or
-    identity
+    interpolate then Conv2dResBlock
+    old code uses lambda and cannot be pickled
+    temp hard-coded dimensions
     '''
 
     def __init__(self, in_dim: int,
@@ -506,35 +639,20 @@ class Interp2dUpsample(nn.Module):
                 self.dropout,
                 self.activation)
         self.conv_block = conv_block
-        if isinstance(interp_size[0], float) and isinstance(interp_size[1], float):
-            self.interp0 = lambda x: F.interpolate(x, scale_factor=interp_size[0],
-                                                   mode=interp_mode,
-                                                   recompute_scale_factor=True,
-                                                   align_corners=True)
-            self.interp1 = lambda x: F.interpolate(x, scale_factor=interp_size[1],
-                                                   mode=interp_mode,
-                                                   recompute_scale_factor=True,
-                                                   align_corners=True)
-        elif isinstance(interp_size[0], tuple) and isinstance(interp_size[1], tuple):
-            self.interp0 = lambda x: F.interpolate(x, size=interp_size[0],
-                                                   mode=interp_mode,
-                                                   align_corners=True)
-            self.interp1 = lambda x: F.interpolate(x, size=interp_size[1],
-                                                   mode=interp_mode,
-                                                   align_corners=True)
-        elif interp_size is None:
-            self.interp0 = Identity()
-            self.interp1 = Identity()
-
+        self.interp_size = interp_size
+        self.interp_mode = interp_mode
         self.debug = debug
 
     def forward(self, x):
-        x = self.interp0(x)
+        x = F.interpolate(x, size=self.interp_size[0],
+                          mode=self.interp_mode,
+                          align_corners=True)
         if self.conv_block:
             x = self.conv(x)
-        x = self.interp1(x)
+        x = F.interpolate(x, size=self.interp_size[1],
+                          mode=self.interp_mode,
+                          align_corners=True)
         return x
-
 
 def attention(query, key, value,
               mask=None, dropout=None, weight=None,

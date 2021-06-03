@@ -710,6 +710,8 @@ class FourierTransformer(nn.Module):
         if self.decoder_type in ['pointwise', 'convolution']:
             self._initialize_layer(self.regressor)
 
+        self.config = dict(self.config)
+
     @staticmethod
     def _initialize_layer(layer, gain=1e-2):
         for param in layer.parameters():
@@ -729,7 +731,7 @@ class FourierTransformer(nn.Module):
         self.dropout = default(self.dropout, 0.05)
         self.dpo = nn.Dropout(self.dropout)
         if self.decoder_type == 'attention':
-            self.num_ft_layers += 1
+            self.num_encoder_layers += 1
         self.attention_types = ['fourier', 'integral',
                                 'cosine', 'galerkin', 'linear', 'softmax']
 
@@ -783,7 +785,7 @@ class FourierTransformer(nn.Module):
                                                     dropout=self.encoder_dropout
                                                     )
         self.encoder_layers = nn.ModuleList(
-            [copy.deepcopy(encoder_layer) for _ in range(self.num_ft_layers)])
+            [copy.deepcopy(encoder_layer) for _ in range(self.num_encoder_layers)])
 
     def _get_freq_regressor(self):
         if self.bulk_regression:
@@ -839,7 +841,7 @@ class FourierTransformer2D(nn.Module):
         self._initialize()
         self.__name__ = self.attention_type.capitalize() + 'Transformer2D'
 
-    def forward(self, node, edge, pos, grid, weight=None):
+    def forward(self, node, edge, pos, grid, weight=None, boundary_value=None):
         '''
         - node: (N, n, n, node_feats)
         - pos: (N, n_s*n_s, pos_dim)
@@ -873,6 +875,10 @@ class FourierTransformer2D(nn.Module):
 
         x = x.view(bsz, n_s, n_s, self.n_hidden)
         x = self.upscaler(x)
+
+        if self.return_latent:
+            x_latent.append(x.contiguous())
+
         x = self.dpo(x)
 
         if self.return_latent:
@@ -880,12 +886,16 @@ class FourierTransformer2D(nn.Module):
             x_latent.append(xr_latent)
         else:
             x = self.regressor(x, grid=grid)
+
         if self.normalizer:
             x = self.normalizer.inverse_transform(x)
 
-        if self.boundary_condition == 'dirichlet' or self.boundary_condition is None:
+        if self.boundary_condition == 'dirichlet':
             x = x[:, 1:-1, 1:-1].contiguous()
             x = F.pad(x, (0, 0, 1, 1, 1, 1), "constant", 0)
+            if boundary_value is not None:
+                assert x.size() == boundary_value.size()
+                x += boundary_value
 
         return dict(preds=x,
                     preds_latent=x_latent,
@@ -896,6 +906,7 @@ class FourierTransformer2D(nn.Module):
         self._get_scaler()
         self._get_encoder()
         self._get_regressor()
+        self.config = dict(self.config)
 
     def cuda(self, device=None):
         self = super().cuda(device)
@@ -914,6 +925,11 @@ class FourierTransformer2D(nn.Module):
         if self.normalizer:
             self.normalizer = self.normalizer.to(*args, **kwargs)
         return self
+
+    def print_config(self):
+        for a in self.config.keys():
+            if not a.startswith('__'):
+                print(f"{a}: \t", getattr(self, a))
 
     @staticmethod
     def _initialize_layer(layer, gain=1e-2):
@@ -943,10 +959,10 @@ class FourierTransformer2D(nn.Module):
             setattr(self, key, self.config[key])
 
         self.dim_feedforward = default(self.dim_feedforward, 2*self.n_hidden)
-        self.dropout = default(self.dropout, 0.1)
+        self.dropout = default(self.dropout, 0.05)
         self.dpo = nn.Dropout(self.dropout)
         if self.decoder_type == 'attention':
-            self.num_ft_layers += 1
+            self.num_encoder_layers += 1
         self.attention_types = ['fourier', 'integral', 'local', 'global',
                                 'cosine', 'galerkin', 'linear', 'softmax']
 
@@ -1007,6 +1023,7 @@ class FourierTransformer2D(nn.Module):
                                                            attn_weight=self.return_attn_weight,
                                                            dropout=self.encoder_dropout,
                                                            ffn_dropout=self.ffn_dropout,
+                                                           norm_eps=self.norm_eps,
                                                            debug=self.debug)
         elif self.attention_type == 'official':
             encoder_layer = TransformerEncoderLayer(d_model=self.n_hidden,
@@ -1019,7 +1036,7 @@ class FourierTransformer2D(nn.Module):
         else:
             raise NotImplementedError("encoder type not implemented.")
         self.encoder_layers = nn.ModuleList(
-            [copy.deepcopy(encoder_layer) for _ in range(self.num_ft_layers)])
+            [copy.deepcopy(encoder_layer) for _ in range(self.num_encoder_layers)])
 
     def _get_regressor(self):
         if self.decoder_type == 'pointwise':
@@ -1051,7 +1068,6 @@ class FourierTransformer2D(nn.Module):
         else:
             raise NotImplementedError("Decoder type not implemented")
 
-
 if __name__ == '__main__':
     for graph in ['gcn', 'gat']:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -1062,7 +1078,7 @@ if __name__ == '__main__':
                             n_targets=1,
                             n_hidden=96,
                             num_feat_layers=2,
-                            num_ft_layers=2,
+                            num_encoder_layers=2,
                             n_head=2,
                             pred_len=0,
                             n_freq_targets=0,
