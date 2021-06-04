@@ -120,12 +120,11 @@ def main():
                        epochs=epochs,
                        patience=None,
                        tqdm_mode='epoch',
-                       save_mode='entire',
                        model_name=model_name,
                        result_name=result_name,
                        device=device)
 
-    model = torch.load(os.path.join(MODEL_PATH, model_name))
+    model.load_state_dict(torch.load(os.path.join(MODEL_PATH, model_name)))
     model.eval()
     val_metric = validate_epoch_darcy(model, metric_func, valid_loader, device)
     print(f"\nBest model's validation metric in this run: {val_metric}")
