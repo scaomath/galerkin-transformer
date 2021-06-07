@@ -10,6 +10,7 @@
 - `--ffn-dropout`: dropout for the FFN in attention blocks.
 - `--decoder-dropout`: dropout in the decoder block.
 - `--gamma`: the strength of the $H^1$-seminorm regularizer, `0.1` in Example 1, and `0.5` in Example 2. When the target is not a smooth function, set this to 0.
+- `--no-scale-factor`: use explicit size instead of scale factor in `torch.nn.functional.interpolate`.
 - `--seed`: RNG, default `1127802`.
 - `--show-batch`: show the progress bar following each batch, instead of the default epoch progress bar, not recommended in the interactive mode.
 
