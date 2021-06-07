@@ -391,8 +391,7 @@ class UnitGaussianNormalizer:
         return (x - self.mean) / (self.std + self.eps)
 
     def inverse_transform(self, x):
-        self.std += self.eps
-        return (x * self.std) + self.mean
+        return (x * (self.std + self.eps)) + self.mean
 
     def to(self, device):
         if torch.is_tensor(self.mean):
