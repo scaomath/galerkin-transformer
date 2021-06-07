@@ -452,6 +452,8 @@ class Interp2dEncoder(nn.Module):
         padding2 = padding//4 if padding//4 >= 1 else 1
         activation_type = default(activation_type, 'silu')
         self.interp_size = interp_size
+        self.is_scale_factor = isinstance(
+            interp_size[0], float) and isinstance(interp_size[1], float)
         self.conv0 = Conv2dResBlock(in_dim, out_dim, kernel_size=kernel_size,
                                     padding=padding, activation_type=activation_type,
                                     dropout=dropout,
@@ -477,10 +479,15 @@ class Interp2dEncoder(nn.Module):
 
     def forward(self, x):
         x = self.conv0(x)
-        x = F.interpolate(x, scale_factor=self.interp_size[0],
-                          mode='bilinear',
-                          recompute_scale_factor=True,
-                          align_corners=True)
+        if self.is_scale_factor:
+            x = F.interpolate(x, scale_factor=self.interp_size[0],
+                              mode='bilinear',
+                              recompute_scale_factor=True,
+                              align_corners=True)
+        else:
+            x = F.interpolate(x, size=self.interp_size[0],
+                              mode='bilinear',
+                              align_corners=True)
         x = self.activation(x)
         x1 = self.conv1(x)
         x2 = self.conv2(x1)
@@ -489,10 +496,15 @@ class Interp2dEncoder(nn.Module):
         if self.add_res:
             out += x
 
-        out = F.interpolate(out, scale_factor=self.interp_size[1],
-                            mode='bilinear',
-                            recompute_scale_factor=True,
-                            align_corners=True,)
+        if self.is_scale_factor:
+            out = F.interpolate(out, scale_factor=self.interp_size[1],
+                                mode='bilinear',
+                                recompute_scale_factor=True,
+                                align_corners=True,)
+        else:
+            out = F.interpolate(out, size=self.interp_size[1],
+                              mode='bilinear',
+                              align_corners=True)
         out = self.activation(out)
         return out
 

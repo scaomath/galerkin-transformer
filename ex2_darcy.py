@@ -1,10 +1,11 @@
 from libs import *
 
+
 def main():
     args = get_args_2d()
-    
+
     cuda = not args.no_cuda and torch.cuda.is_available()
-    if cuda: 
+    if cuda:
         torch.cuda.manual_seed(args.seed)
         torch.cuda.manual_seed_all(args.seed)
     device = torch.device('cuda' if cuda else 'cpu')
@@ -33,7 +34,8 @@ def main():
 
     n_grid = int(((421 - 1)/args.subsample_nodes) + 1)
     n_grid_c = int(((421 - 1)/args.subsample_attn) + 1)
-    downsample, upsample = DarcyDataset.get_scaler_sizes(n_grid, n_grid_c)
+    downsample, upsample = DarcyDataset.get_scaler_sizes(n_grid, n_grid_c,
+                                                         scale_factor=not args.no_scale_factor)
 
     sample = next(iter(train_loader))
 
@@ -97,7 +99,7 @@ def main():
                                              additional_str=f'32f'
                                              )
     print(f"Saving model and result in {MODEL_PATH}/{model_name}\n")
-    
+
     epochs = args.epochs
     if config['attention_type'] in ['fourier', 'softmax']:
         lr = min(args.lr, 5e-4)
@@ -153,7 +155,9 @@ def main():
         z_true = u[i, ..., 0].cpu().numpy()
         _ = showcontour(z, width=500, height=500,)
         _ = showcontour(z_true, width=500, height=500,)
-        print("Relative error: ", np.linalg.norm(z-z_true)/np.linalg.norm(z_true))
+        print("Relative error: ", np.linalg.norm(
+            z-z_true)/np.linalg.norm(z_true))
+
 
 if __name__ == '__main__':
     main()

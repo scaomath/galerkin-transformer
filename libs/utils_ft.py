@@ -578,6 +578,8 @@ def get_args_2d(subsample_nodes=3,
                         help='max learning rate (default: 0.001)')
     parser.add_argument('--gamma', type=float, default=gamma, metavar='regularizer',
                         help=f'strength of gradient regularizer (default: {gamma})')
+    parser.add_argument('--no-scale-factor', action='store_true', default=False,
+                        help='use size instead of scale factor in interpolation')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
     parser.add_argument('--show-batch', action='store_true', default=False,

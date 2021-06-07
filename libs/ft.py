@@ -697,7 +697,7 @@ class DarcyDataset(Dataset):
         return A
 
     @staticmethod
-    def get_scaler_sizes(n_f, n_c):
+    def get_scaler_sizes(n_f, n_c, scale_factor=True):
         factor = np.sqrt(n_c/n_f)
         factor = np.round(factor, 4)
         last_digit = float(str(factor)[-1])
@@ -708,7 +708,11 @@ class DarcyDataset(Dataset):
         down_factor = (factor, factor)
         n_m = round(n_f*factor)-1
         up_size = ((n_m, n_m), (n_f, n_f))
-        return down_factor, up_size
+        down_size = ((n_m, n_m), (n_c, n_c))
+        if scale_factor:
+            return down_factor, up_size
+        else:
+            return down_size, up_size
 
     @staticmethod
     def get_interp2d(x, n_f, n_c):
