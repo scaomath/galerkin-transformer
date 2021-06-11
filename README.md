@@ -10,7 +10,11 @@ For how to train our models please refer to [`training.md`](./training.md).
 
 If just wanting to see what is it like for the models to perform on the unseen test set, please refer to [evaluation](#evaluation-notebooks).
 
-Even though everyone is transformer'ing, the mathematics behind the attention mechanism is not well understood. We have also shown that the global attention (Galerkin-type if the softmax is removed) is nothing but a Petrov-Galerkin projection under a Hilbertian setup. We use a method commonly known as ''mixed method'' in the finite element analysis community that is used to solve fluid/electromagnetics problems. Unlike finite element methods, in an attention-based operator learner the approximation is not discretization-tied, in that (1) the dimensions of the approximation spaces are not tied to the geometry as in the traditional finite element analysis (or finite difference, spectral methods, radial basis, etc); (2) the approximation spaces are being dynamically updated by the nonlinear universal approximator due to the presence of the positional encodings in the latent representations. 
+Even though everyone is transformer'ing, the mathematics behind the attention mechanism is not well understood. We have also shown that the Galerkin-type attention (just a linear attention with softmax removed) is nothing but having approximation capacity on par with a Petrov-Galerkin projection under a Hilbertian setup. We use a method commonly known as ''mixed method'' in the finite element analysis community that is used to solve fluid/electromagnetics problems. Unlike finite element methods, in an attention-based operator learner the approximation is not discretization-tied, in that:
+1. the dimensions of the approximation spaces are not tied to the geometry as in the traditional finite element analysis (or finite difference, spectral methods, radial basis, etc);
+2. the approximation spaces are being dynamically updated by the nonlinear universal approximator due to the presence of the positional encodings in the latent representations.
+
+For a more layman oriented explanation please refer to: [Galerkin Transformer: A One-Shot Experiment at NeurIPS 2021](https://scaomath.github.io/blog/galerkin-transformer-neurips/)
 
 For details please refer to: [https://arxiv.org/abs/2105.14995](https://arxiv.org/abs/2105.14995)
 ```bibtex
