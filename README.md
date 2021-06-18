@@ -1,20 +1,23 @@
 # Fourier Transformer and Galerkin Transformer: Attention without softmax
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python 3.7](https://img.shields.io/badge/python-3.7-blue.svg)](https://www.python.org/downloads/release/python-370/)
-[![Pytorch 1.8](https://img.shields.io/badge/pytorch-1.8-blue.svg)](https://pytorch.org/)
+[![Pytorch 1.8](https://img.shields.io/badge/pytorch-1.9-blue.svg)](https://pytorch.org/)
+[![arXiv](https://img.shields.io/badge/arXiv-2105.14995-b31b1b.svg)](https://arxiv.org/abs/2105.14995)
 
-TL;DR:
+# Summary
+- A non-numerical analyst oriented explanation: [Galerkin Transformer: A One-Shot Experiment at NeurIPS 2021](https://scaomath.github.io/blog/galerkin-transformer-neurips/)
+
+- For how to train our models please refer to [`training.md`](./training.md).
+
+- If just wanting to see what is it like for the models to perform on the unseen test set, please refer to [evaluation](#evaluation-notebooks).
+
+## Introduction
 The new attention operator is `(QK^T)V` or `Q(K^TV)`, whichever doing matmul gets the layer normalization, i.e., `Q, K` get layer normalized in the local attention, as for `K, V` in the global attention. No softmax, no layer normalization is applied afterward. This is called a scale-preserving simple attention. The feature extractor is a simple FFN or an interpolation-based CNN, the decoder is the spectral convolution re-implemented using only real parameters from the best operator learner to-date Fourier Neural Operator (FNO) in [*Li et al 2020*](https://github.com/zongyi-li/fourier_neural_operator) if the target is smooth, or just a pointwise FFN if otherwise. The resulting network is extremely powerful in learning PDE-related operators (energy decay, inverse coefficient identification).
 
-For how to train our models please refer to [`training.md`](./training.md).
 
-If just wanting to see what is it like for the models to perform on the unseen test set, please refer to [evaluation](#evaluation-notebooks).
-
-Even though everyone is transformer'ing, the mathematics behind the attention mechanism is not well understood. We have also shown that the Galerkin-type attention (just a linear attention with softmax removed) is nothing but having approximation capacity on par with a Petrov-Galerkin projection under a Hilbertian setup. We use a method commonly known as ''mixed method'' in the finite element analysis community that is used to solve fluid/electromagnetics problems. Unlike finite element methods, in an attention-based operator learner the approximation is not discretization-tied, in that:
+Even though everyone is transformer'ing, the mathematics behind the attention mechanism is not well understood. We have also shown that the Galerkin-type attention (just a linear attention with softmax removed) is nothing but having an approximation capacity on par with a Petrov-Galerkin projection under a Hilbertian setup. We use a method commonly known as ''mixed method'' in the finite element analysis community that is used to solve fluid/electromagnetics problems. Unlike finite element methods, in an attention-based operator learner the approximation is not discretization-tied, in that:
 1. the dimensions of the approximation spaces are not tied to the geometry as in the traditional finite element analysis (or finite difference, spectral methods, radial basis, etc);
 2. the approximation spaces are being dynamically updated by the nonlinear universal approximator due to the presence of the positional encodings in the latent representations.
-
-For a more layman oriented explanation please refer to: [Galerkin Transformer: A One-Shot Experiment at NeurIPS 2021](https://scaomath.github.io/blog/galerkin-transformer-neurips/)
 
 For details please refer to: [https://arxiv.org/abs/2105.14995](https://arxiv.org/abs/2105.14995)
 ```bibtex
@@ -31,6 +34,8 @@ For details please refer to: [https://arxiv.org/abs/2105.14995](https://arxiv.or
 
 
 # Requirements
+(Updated Jun 17 2021) `PyTorch` requirement updated to `1.9.0` as the introduction of the [`batch_first` argument](https://github.com/pytorch/pytorch/pull/55285) will conform with our pipeline.
+
 To install requirements:
 
 ```setup
@@ -41,7 +46,7 @@ pip install -r requirements.txt
 seaborn==0.11.1
 torchinfo==0.0.8
 numpy==1.20.2
-torch==1.8.0
+torch==1.9.0
 plotly==4.14.3
 scipy==1.6.2
 psutil==5.8.0

@@ -14,7 +14,7 @@ from typing import Optional
 import torch
 import torch.nn as nn
 from torch import Tensor
-from torch.nn import MultiheadAttention
+from torch.nn import MultiheadAttention, TransformerEncoderLayer
 from torch.nn.init import constant_, xavier_uniform_
 from torchinfo import summary
 
@@ -140,14 +140,14 @@ class FourierTransformerEncoderLayer(nn.Module):
             return x
 
 
-class TransformerEncoderLayer(nn.Module):
+class _TransformerEncoderLayer(nn.Module):
     r"""
     Taken from official torch implementation:
     https://pytorch.org/docs/stable/_modules/torch/nn/modules/transformer.html#TransformerEncoderLayer
         - add a layer norm switch
         - add an attn_weight output switch
         - batch first
-        batch_first will be supported in the next version PyTorch
+        batch_first has been added in PyTorch 1.9.0
         https://github.com/pytorch/pytorch/pull/55285
     """
 
@@ -157,7 +157,7 @@ class TransformerEncoderLayer(nn.Module):
                  layer_norm=True,
                  attn_weight=False,
                  ):
-        super(TransformerEncoderLayer, self).__init__()
+        super(_TransformerEncoderLayer, self).__init__()
         self.self_attn = MultiheadAttention(d_model, nhead, dropout=dropout)
         self.linear1 = nn.Linear(d_model, dim_feedforward)
         self.dropout = nn.Dropout(dropout)
@@ -174,7 +174,7 @@ class TransformerEncoderLayer(nn.Module):
     def __setstate__(self, state):
         if 'activation' not in state:
             state['activation'] = F.relu
-        super(TransformerEncoderLayer, self).__setstate__(state)
+        super(_TransformerEncoderLayer, self).__setstate__(state)
 
     def forward(self, src: Tensor,
                 pos: Optional[Tensor] = None,
@@ -777,7 +777,7 @@ class FourierTransformer(nn.Module):
                                                            ffn_dropout=self.ffn_dropout,
                                                            debug=self.debug)
         else:
-            encoder_layer = TransformerEncoderLayer(d_model=self.n_hidden,
+            encoder_layer = _TransformerEncoderLayer(d_model=self.n_hidden,
                                                     nhead=self.n_head,
                                                     dim_feedforward=self.dim_feedforward,
                                                     layer_norm=self.layer_norm,
@@ -865,11 +865,17 @@ class FourierTransformer2D(nn.Module):
         x = self.dpo(x)
 
         for encoder in self.encoder_layers:
-            if self.return_attn_weight:
+            if self.return_attn_weight and self.attention_type != 'official':
                 x, attn_weight = encoder(x, pos, weight)
                 attn_weights.append(attn_weight)
-            else:
+            elif self.attention_type != 'official':
                 x = encoder(x, pos, weight)
+            else:
+                out_dim = self.n_head*self.pos_dim + self.n_hidden
+                x = x.view(bsz, -1, self.n_head, self.n_hidden//self.n_head).transpose(1, 2)
+                x = torch.cat([pos.repeat([1, self.n_head, 1, 1]), x], dim=-1)
+                x = x.transpose(1, 2).contiguous().view(bsz, -1, out_dim)
+                x = encoder(x)
             if self.return_latent:
                 x_latent.append(x.contiguous())
 
@@ -1026,12 +1032,12 @@ class FourierTransformer2D(nn.Module):
                                                            norm_eps=self.norm_eps,
                                                            debug=self.debug)
         elif self.attention_type == 'official':
-            encoder_layer = TransformerEncoderLayer(d_model=self.n_hidden,
+            encoder_layer = TransformerEncoderLayer(d_model=self.n_hidden+self.pos_dim*self.n_head,
                                                     nhead=self.n_head,
                                                     dim_feedforward=self.dim_feedforward,
-                                                    layer_norm=self.layer_norm,
-                                                    attn_weight=self.return_attn_weight,
                                                     dropout=self.encoder_dropout,
+                                                    batch_first=True,
+                                                    layer_norm_eps=self.norm_eps,
                                                     )
         else:
             raise NotImplementedError("encoder type not implemented.")

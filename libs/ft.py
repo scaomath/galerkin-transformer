@@ -371,7 +371,7 @@ class BurgersDataset(Dataset):
                     target=target.float(),)
 
 class UnitGaussianNormalizer:
-    def __init__(self, eps=1e-8):
+    def __init__(self, eps=1e-5):
         super(UnitGaussianNormalizer, self).__init__()
         '''
         modified from utils3.py in 
