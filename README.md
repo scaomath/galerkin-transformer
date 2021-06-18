@@ -5,7 +5,8 @@
 [![arXiv](https://img.shields.io/badge/arXiv-2105.14995-b31b1b.svg)](https://arxiv.org/abs/2105.14995)
 
 # Summary
-- A non-numerical analyst oriented explanation: [Galerkin Transformer: A One-Shot Experiment at NeurIPS 2021](https://scaomath.github.io/blog/galerkin-transformer-neurips/)
+- A non-numerical analyst oriented explanation on Toward Data Science: [Galerkin Transformer: A One-Shot Experiment at NeurIPS 2021](https://towardsdatascience.com/galerkin-transformer-a-one-shot-experiment-at-neurips-2021-96efcbaefd3e)
+-  [The post on my blog (a little bit more details on the math)](https://scaomath.github.io/blog/galerkin-transformer-neurips/).
 
 - For how to train our models please refer to [`training.md`](./training.md).
 
