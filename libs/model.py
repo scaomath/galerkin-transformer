@@ -103,7 +103,7 @@ class FourierTransformerEncoderLayer(nn.Module):
 
     def forward(self, x, pos=None, weight=None):
         '''
-        - x: node feature, (n_batch, seq_len, n_feats)
+        - x: node feature, (batch_size, seq_len, n_feats)
         - pos: position coords, needed in every head
 
         Remark:
@@ -184,7 +184,7 @@ class _TransformerEncoderLayer(nn.Module):
         r"""Pass the input through the encoder layer.
 
         Args (modified from torch):
-            src: the sequence to the encoder layer (required):  (n_batch, seq_len, d_model)
+            src: the sequence to the encoder layer (required):  (batch_size, seq_len, d_model)
             src_mask: the mask for the src sequence (optional).
             src_key_padding_mask: the mask for the src keys per batch (optional).
 
@@ -658,11 +658,19 @@ class FourierTransformer(nn.Module):
 
     def forward(self, node, edge, pos, grid=None, weight=None):
         '''
-        - node: (N, seq_len, node_feats)
-        - pos: (N, seq_len, pos_dim)
-        - edge: (N, seq_len, seq_len, edge_feats)
-        - weight: (N, seq_len, seq_len): mass matrix prefered
-            or (N, seq_len) when mass matrices are not provided
+        seq_len: n, number of grid points
+        node_feats: number of features of the inputs
+        edge_feats: number of Laplacian matrices (including learned)
+        pos_dim: dimension of the Euclidean space
+        - node: (batch_size, seq_len, node_feats)
+        - pos: (batch_size, seq_len, pos_dim)
+        - edge: (batch_size, seq_len, seq_len, edge_feats)
+        - weight: (batch_size, seq_len, seq_len): mass matrix prefered
+            or (batch_size, seq_len) when mass matrices are not provided
+        
+        Remark:
+        for classic Transformer: pos_dim = n_hidden = 512
+        pos encodings is added to the latent representation
         '''
         x_latent = []
         attn_weights = []
@@ -843,12 +851,12 @@ class FourierTransformer2D(nn.Module):
 
     def forward(self, node, edge, pos, grid, weight=None, boundary_value=None):
         '''
-        - node: (N, n, n, node_feats)
-        - pos: (N, n_s*n_s, pos_dim)
-        - edge: (N, n_s*n_s, n_s*n_s, edge_feats)
-        - weight: (N, n_s*n_s, n_s*n_s): mass matrix prefered
-            or (N, n_s*n_s) when mass matrices are not provided (lumped mass)
-        - grid: (N, n-2, n-2, 2) excluding boundary
+        - node: (batch_size, n, n, node_feats)
+        - pos: (batch_size, n_s*n_s, pos_dim)
+        - edge: (batch_size, n_s*n_s, n_s*n_s, edge_feats)
+        - weight: (batch_size, n_s*n_s, n_s*n_s): mass matrix prefered
+            or (batch_size, n_s*n_s) when mass matrices are not provided (lumped mass)
+        - grid: (batch_size, n-2, n-2, 2) excluding boundary
         '''
         bsz = node.size(0)
         n_s = int(pos.size(1)**(0.5))
@@ -1115,11 +1123,11 @@ if __name__ == '__main__':
 
         ft = FourierTransformer(**config)
         ft.to(device)
-        n_batch, seq_len = 8, 512
-        summary(ft, input_size=[(n_batch, seq_len, 1),
-                                (n_batch, seq_len, seq_len, 5),
-                                (n_batch, seq_len, 1),
-                                (n_batch, seq_len, 1)], device=device)
+        batch_size, seq_len = 8, 512
+        summary(ft, input_size=[(batch_size, seq_len, 1),
+                                (batch_size, seq_len, seq_len, 5),
+                                (batch_size, seq_len, 1),
+                                (batch_size, seq_len, 1)], device=device)
 
     layer = TransformerEncoderLayer(d_model=128, nhead=4)
     print(layer.__class__)
