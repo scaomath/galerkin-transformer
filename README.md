@@ -6,9 +6,9 @@
 
 # Summary
 - A non-numerical analyst oriented explanation on Toward Data Science: [Galerkin Transformer: A One-Shot Experiment at NeurIPS 2021](https://towardsdatascience.com/galerkin-transformer-a-one-shot-experiment-at-neurips-2021-96efcbaefd3e)
--  [The post on my blog (a little bit more details on the math)](https://scaomath.github.io/blog/galerkin-transformer-neurips/).
+-  [The post on my blog (a bit more details on the math)](https://scaomath.github.io/blog/galerkin-transformer-neurips/).
 
-- For how to train our models please refer to [`training.md`](./training.md).
+- For how to train our models please refer to [the training instructions under the examples folder](./examples/README.md).
 
 - If just wanting to see what is it like for the models to perform on the unseen test set, please refer to [evaluation](#evaluation-notebooks).
 
@@ -71,7 +71,7 @@ The data is courtesy of [Zongyi Li (Caltech)](https://github.com/zongyi-li/fouri
 The repo has a semi env variable `$DATA_PATH` set in [`utils_ft.py`](./libs/utils_ft.py), if you have a global system environ variable name `DATA_PATH`, then please put the data in that folder. Otherwise, please unzip the Burgers and Darcy flow problem files to the `./data` folder. 
 
 # Examples
-All examples are learning PDE-related operators. The setting can be found in [`config.yml`](./config.yml). To fully reproducing our result, please refer to [`training.md`](./training.md) for all the possible args.
+All examples are learning PDE-related operators. The setting can be found in [`config.yml`](./config.yml). To fully reproducing our result, please refer to [the training scripts](./examples/README.md) for all the possible args.
 
 By default the evaluation is performed on the last 100 samples in the test dataset like the code in [FNO repo](https://github.com/zongyi-li/fourier_neural_operator). All trainers are using the [`1cycle` scheduler](https://arxiv.org/abs/1708.07120) in [PyTorch](https://pytorch.org/docs/master/generated/torch.optim.lr_scheduler.OneCycleLR.html) for 100 epochs. Every example has a `--seed $SEED` argument and the default seed is 1127802. Again if you have a system wide env variable named `SEED`, the code will use that seed instead. 
 
@@ -82,18 +82,18 @@ Since [`nn.functional.interpolate`](https://pytorch.org/docs/master/generated/to
 
 ![net](./data/simple_ft.png)
 
-The baseline benchmark [`ex1_burgers.py`](./ex1_burgers.py): evaluation relative error is about `1e-3` with a simple pointwise forward expansion feature extractor. The input is the initial condition of a viscous Burgers' equation on a discrete grid, the output is an approximation to the solution marched to time $1$. The initial data are generating using a GRF and the data in the validation set are not in the train set.
+The baseline benchmark [`ex1_burgers.py`](./examples/ex1_burgers.py): evaluation relative error is about `1e-3` with a simple pointwise forward expansion feature extractor. The input is the initial condition of a viscous Burgers' equation on a discrete grid, the output is an approximation to the solution marched to time $1$. The initial data are generating using a GRF and the data in the validation set are not in the train set.
 
 Default benchmark on a 2048 grid using a Fourier Transformer, with 4 Fourier-type attention encoder layers as the encoder and 2 spectral convolution layers from [Li et al 2020](https://github.com/zongyi-li/fourier_neural_operator) as the decoder (to reduce the overfit we decrease the `dmodel` of the spectral conv from the original 64 to 48):
 ```bash
 python ex1_burgers.py
 ```
-For more choices of arguments, please refer to [Example 1 in `training.md`](./training.md#Example-1-viscous-Burgers).
+For more choices of arguments, please refer to [Example 1 in models](./examples/README.md#Example-1-viscous-Burgers).
 
 ## Example 2 Interface Darcy's flow
 ![net](./data/2d_ft.png)
 
-The baseline benchmark [`ex2_darcy.py`](./ex2_darcy.py): evaluation relative error is about `8e-3` to `1e-2` with a 3-level interpolation-based CNN (CiNN) feature extractor. The coarse grid latent representation is sent to attention layers The operator input is discontinuous coefficient with a random interface sampled at a discrete grid, the output is a finite difference approximation to the solution restricted to the sampled grid from a fine `421x421` grid. The coefficient in the validation set are not in the train set.
+The baseline benchmark [`ex2_darcy.py`](./examples/ex2_darcy.py): evaluation relative error is about `8e-3` to `1e-2` with a 3-level interpolation-based CNN (CiNN) feature extractor. The coarse grid latent representation is sent to attention layers The operator input is discontinuous coefficient with a random interface sampled at a discrete grid, the output is a finite difference approximation to the solution restricted to the sampled grid from a fine `421x421` grid. The coefficient in the validation set are not in the train set.
 
 Default benchmark on a 141x141 grid using the Galerkin Transformer, 6 Galerkin-type attention layers with `d_model=128` and `nhead=4` as the encoder, and 2 spectral conv layers from [Li et al 2020](https://github.com/zongyi-li/fourier_neural_operator) as the decoder. There is a small dropout `5e-2` in the attention layer as well as in the feature extraction layer:
 ```bash
@@ -103,7 +103,7 @@ For a smaller memory GPU or CPU, please use the 85x85 grid fine, 29x29 coarse gr
 ```bash
 python ex2_darcy.py --subsample-attn 15 --subsample-nodes 5 --attention-type 'galerkin' --xavier-init 0.01 --diagonal-weight 0.01
 ```
-For more choices of arguments, please refer to [Example 2 in `training.md`](./training.md#Example-2-interface-Darcy).
+For more choices of arguments, please refer to [Example 2 in models](./examples/README.md#Example-2-interface-Darcy).
 
 ## Example 3 Inverse coefficient identification for interface Darcy's flow
 
@@ -132,13 +132,13 @@ Default benchmark is on a 141x141 fine grid input and a 36x36 coarse grid coeffi
 ```bash
 python ex3_darcy_inv.py --noise 0.01
 ```
-For more choices of arguments, please refer to [Example 3 in `training.md`](./training.md#Example-3-inverse-Darcy).
+For more choices of arguments, please refer to [Example 3 in models](./examples/README.md#Example-3-inverse-Darcy).
 
 # Evaluation notebooks
 Please download the pretrained model's `.pt` files from Releases and put them in the `./models` folder.
-- [Example 1](./ex1_burgers_eval.ipynb)
-- [Example 2](./ex2_darcy_eval.ipynb)
-- [Example 3](./ex3_darcy_inv_eval.ipynb)
+- [Example 1](./eval/ex1_burgers_eval.ipynb)
+- [Example 2](./eval/ex2_darcy_eval.ipynb)
+- [Example 3](./eval/ex3_darcy_inv_eval.ipynb)
 
 
 # Memory and speed profiling using `autograd.profiler`
@@ -157,7 +157,7 @@ Encoder layer wrapper profiling: profile a wrapper with 10 layers of encoder in 
 ```bash
 python encoder_memory_profile.py --batch-size 4 --dmodel 128 --num-layers 6 -ndim 2
 ```
-Please refer to [the memory profile section in `training.md`](./training.md#Memory-profiling) for more detailed profiling in each example.
+Please refer to [the memory profile section in models](./models/README.md#Memory-profiling) for more detailed profiling in each example.
 
 
 # License
