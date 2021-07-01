@@ -34,12 +34,16 @@ For details please refer to: [https://arxiv.org/abs/2105.14995](https://arxiv.or
 ```
 
 
-# Requirements
+# Install
+
+## Requirements
 (Updated Jun 17 2021) `PyTorch` requirement updated to `1.9.0` as the introduction of the [`batch_first` argument](https://github.com/pytorch/pytorch/pull/55285) will conform with our pipeline.
 
-To install requirements:
+This package can be cloned locally and used with the following requirements:
 
-```setup
+```bash
+git clone https://github.com/scaomath/fourier_transformer.git
+cd fourier_transformer
 pip install -r requirements.txt
 ```
 
@@ -60,6 +64,37 @@ If interactive mode is to be used, please install
 ```
 jupyterthemes==0.20.0
 ipython==7.23.1
+```
+
+## Installing using pip
+
+This package can be installed using pip.
+
+```bash
+python3 -m pip install galerkin-transformer
+```
+
+Example usage of the Simple Fourier/Galerkin Transformer encoder layers:
+
+```python
+from galerkin_transformer.model import *
+
+encoder_layer = FourierTransformerEncoderLayer(
+                 d_model=128,
+                 pos_dim=1,
+                 n_head=4,
+                 dim_feedforward=512,
+                 attention_type='galerkin',
+                 layer_norm=False,
+                 attn_norm=True,
+                 norm_type='layer',
+                 dropout=0.05)
+encoder_layers = nn.ModuleList([copy.deepcopy(encoder_layer) for _ in range(6)])
+x = torch.randn(8, 8192, 128) # embedding
+pos = torch.arange(0, 8192).unsqueeze(-1) # Euclidean coordinates
+pos = pos.repeat(8, 1, 1)
+for layer in encoder_layers:
+    x = layer(x, pos)
 ```
 
 # Data
