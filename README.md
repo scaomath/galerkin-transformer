@@ -8,7 +8,7 @@
 - A non-numerical analyst oriented explanation on Toward Data Science: [Galerkin Transformer: A One-Shot Experiment at NeurIPS 2021](https://towardsdatascience.com/galerkin-transformer-a-one-shot-experiment-at-neurips-2021-96efcbaefd3e)
 -  [The post on my blog (a bit more details on the math)](https://scaomath.github.io/blog/galerkin-transformer-neurips/).
 
-- For how to train our models please refer to [the training instructions under the examples folder](./examples/README.md).
+- For how to train our models please refer to [the training instructions under the `/examples` folder](./examples/).
 
 - If just wanting to see what is it like for the models to perform on the unseen test set, please refer to [evaluation](#evaluation-notebooks).
 
@@ -82,7 +82,7 @@ Since [`nn.functional.interpolate`](https://pytorch.org/docs/master/generated/to
 
 ![net](./data/simple_ft.png)
 
-The baseline benchmark [`ex1_burgers.py`](./examples/ex1_burgers.py): evaluation relative error is about `1e-3` with a simple pointwise forward expansion feature extractor. The input is the initial condition of a viscous Burgers' equation on a discrete grid, the output is an approximation to the solution marched to time $1$. The initial data are generating using a GRF and the data in the validation set are not in the train set.
+The baseline benchmark [`ex1_burgers.py`](./examples/): evaluation relative error is about `1e-3` with a simple pointwise forward expansion feature extractor. The input is the initial condition of a viscous Burgers' equation on a discrete grid, the output is an approximation to the solution marched to time $1$. The initial data are generating using a GRF and the data in the validation set are not in the train set.
 
 Default benchmark on a 2048 grid using a Fourier Transformer, with 4 Fourier-type attention encoder layers as the encoder and 2 spectral convolution layers from [Li et al 2020](https://github.com/zongyi-li/fourier_neural_operator) as the decoder (to reduce the overfit we decrease the `dmodel` of the spectral conv from the original 64 to 48):
 ```bash
@@ -93,7 +93,7 @@ For more choices of arguments, please refer to [Example 1 in models](./examples/
 ## Example 2 Interface Darcy's flow
 ![net](./data/2d_ft.png)
 
-The baseline benchmark [`ex2_darcy.py`](./examples/ex2_darcy.py): evaluation relative error is about `8e-3` to `1e-2` with a 3-level interpolation-based CNN (CiNN) feature extractor. The coarse grid latent representation is sent to attention layers The operator input is discontinuous coefficient with a random interface sampled at a discrete grid, the output is a finite difference approximation to the solution restricted to the sampled grid from a fine `421x421` grid. The coefficient in the validation set are not in the train set.
+The baseline benchmark [`ex2_darcy.py`](./examples/): evaluation relative error is about `8e-3` to `1e-2` with a 3-level interpolation-based CNN (CiNN) feature extractor. The coarse grid latent representation is sent to attention layers The operator input is discontinuous coefficient with a random interface sampled at a discrete grid, the output is a finite difference approximation to the solution restricted to the sampled grid from a fine `421x421` grid. The coefficient in the validation set are not in the train set.
 
 Default benchmark on a 141x141 grid using the Galerkin Transformer, 6 Galerkin-type attention layers with `d_model=128` and `nhead=4` as the encoder, and 2 spectral conv layers from [Li et al 2020](https://github.com/zongyi-li/fourier_neural_operator) as the decoder. There is a small dropout `5e-2` in the attention layer as well as in the feature extraction layer:
 ```bash
@@ -126,7 +126,7 @@ Example 3 is an inverse interface coefficient identification for Darcy flow base
 
 ![Evaluation target](./data/darcy_inv_pred_noise_0.05_train_0.1.png)
 
-The baseline benchmark [`ex3_darcy_inv.py`](./ex3_darcy_inv.py):  Evaluation relative error is about `1.5e-2` to `2e-2` without noise, `2.5e-2` with 1% noise, and `7e-2` to `8e-2` with 10% noise in both train and test. If the training data is clean, then adding noise would not generalize well in the test. It is recommended to training with a reasonable amount of noise. 
+The baseline benchmark [`ex3_darcy_inv.py`](./examples/):  Evaluation relative error is about `1.5e-2` to `2e-2` without noise, `2.5e-2` with 1% noise, and `7e-2` to `8e-2` with 10% noise in both train and test. If the training data is clean, then adding noise would not generalize well in the test. It is recommended to training with a reasonable amount of noise. 
 
 Default benchmark is on a 141x141 fine grid input and a 36x36 coarse grid coefficient output. The model is the Galerkin Transformer with 6 stacked Galerkin-type attention layers (`d_model=192`, `nhead=4`) with a simple pointwise feed-forward neural network to map the attention output back the desired dimension. There is a small dropout in every key components of the network (`5e-2`). The noise is added to the normalized input, so 0.01 noise means 1%, and 0.1 means 10%. By default there is 1% noise added.
 ```bash
@@ -157,7 +157,7 @@ Encoder layer wrapper profiling: profile a wrapper with 10 layers of encoder in 
 ```bash
 python encoder_memory_profile.py --batch-size 4 --dmodel 128 --num-layers 6 -ndim 2
 ```
-Please refer to [the memory profile section in models](./models/README.md#Memory-profiling) for more detailed profiling in each example.
+Please refer to [the memory profile section in models](./examples/README.md#Memory-profiling) for more detailed profiling in each example.
 
 
 # License
