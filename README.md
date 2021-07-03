@@ -42,9 +42,9 @@ For details please refer to: [https://arxiv.org/abs/2105.14995](https://arxiv.or
 This package can be cloned locally and used with the following requirements:
 
 ```bash
-git clone https://github.com/scaomath/fourier_transformer.git
-cd fourier_transformer
-pip install -r requirements.txt
+git clone https://github.com/scaomath/fourier-transformer.git
+cd fourier-transformer
+python3 -m pip install -r requirements.txt
 ```
 
 ```sh
