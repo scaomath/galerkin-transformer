@@ -3,6 +3,8 @@
 [![Python 3.7](https://img.shields.io/badge/python-3.7-blue.svg)](https://www.python.org/downloads/release/python-370/)
 [![Pytorch 1.8](https://img.shields.io/badge/pytorch-1.9-blue.svg)](https://pytorch.org/)
 [![arXiv](https://img.shields.io/badge/arXiv-2105.14995-b31b1b.svg)](https://arxiv.org/abs/2105.14995)
+[![Open in Visual Studio Code](https://open.vscode.dev/badges/open-in-vscode.svg)](https://open.vscode.dev/scaomath/galerkin-transformer)
+
 
 # Summary
 - A non-numerical analyst oriented explanation on Toward Data Science: [Galerkin Transformer: A One-Shot Experiment at NeurIPS 2021](https://towardsdatascience.com/galerkin-transformer-a-one-shot-experiment-at-neurips-2021-96efcbaefd3e)
