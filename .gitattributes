@@ -1,3 +1,4 @@
 *.python linguist-detectable=true 
 # *.ipynb linguist-language=Python
-*.ipynb linguist-detectable=false
+# *.ipynb linguist-detectable=false
+*.ipynb linguist-documentation
