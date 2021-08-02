@@ -2,9 +2,9 @@
 - `--no-cuda`: use CPU, not recommended.
 - `--layer-norm`: use the conventional layer normalization scheme that kills all scalings.
 - `--attention-type`: `'softmax'`,  `'fourier'`,  `'linear'`, or  `'galerkin'`.
-- `--batch-size` + a number (2, 4, 8, 16). If using `softmax` type attention, max `batch_size` for 2D problem has to be 2 when the fine grid is of size bigger than `211x211`.
+- `--batch-size` + a number (2, 4, 8, 16). If using `softmax` type attention on a single GPU with VRAM less than 20G, max `batch_size` for 2D problem has to be 2 when the fine grid is of size bigger than `211x211`.
 - `--lr`: max learning rate in `1cycle`, when attention is `'softmax'` please use `5e-4` instead of the default `1e-3`.
-- `--xavier-init`: gain for Xavier init for `W^{Q,K,V}`.
+- `--xavier-init`: [gain for Xavier initialization](https://pytorch.org/docs/stable/_modules/torch/nn/init.html#xavier_normal_) for `W^{Q,K,V}`.
 - `--diagonal-weight`: a small diagonal matrix is added to the initialization of `W^{Q,K,V}`, recommended value is `1e-2`.
 - `--encoder-dropout`: dropout for the attention weights.
 - `--ffn-dropout`: dropout for the FFN in attention blocks.
@@ -20,7 +20,7 @@
 - If we want to compare the softmax normalized counterparts, just change `'galerkin'` to `'linear'`, `'fourier'` to `'softmax'`, and the setting should be carried over. 
 - If we want to use the default setting of the original Transformer, please use `--xavier-init 1 --diagonal-weight 0 --ffn-dropout 0.1 --encoder-dropout 0.1` in the arguments.
 - By default, the noise for the inverse coefficient identification problem in Example 3 is 0.01. If we want to have a specific noise, please `--noise $NOISE`. Note than the noises are added to both train and test.
-- If we want to compare with the FNO baselines, please clone the repo at https://github.com/zongyi-li/fourier_neural_operator to local, and change the scheduler in `fourier_1d.py` and `fourier_2d.py` to:
+- If we want to compare with the FNO baselines, please clone the repo at https://github.com/zongyi-li/fourier_neural_operator to local, and change the scheduler in `fourier_1d.py` and `fourier_2d.py` to match the current scheduler in our repo:
     ```python
     epochs = 100
     scheduler = OneCycleLR(optimizer, max_lr=1e-3, div_factor=1e4, final_div_factor=1e4,
