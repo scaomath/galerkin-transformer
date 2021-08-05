@@ -1,4 +1,8 @@
-'''zero-shot super-resolution'''
+'''
+zero-shot super-resolution
+train: 2048 grid
+val: 8192 grid
+'''
 import sys
 sys.path.append("../")
 from libs import *

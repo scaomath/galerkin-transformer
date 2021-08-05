@@ -139,6 +139,107 @@ class FourierTransformerEncoderLayer(nn.Module):
         else:
             return x
 
+class GalerkinTransformerDecoderLayer(nn.Module):
+    r"""
+    A lite implementation of the decoder layer based on linear causal attention
+    adapted from the TransformerDecoderLayer in PyTorch
+    https://github.com/pytorch/pytorch/blob/afc1d1b3d6dad5f9f56b1a4cb335de109adb6018/torch/nn/modules/transformer.py#L359
+    """
+    def __init__(self, d_model, 
+                        nhead,
+                        pos_dim = 1,
+                        dim_feedforward=512, 
+                        attention_type='galerkin',
+                        layer_norm=True,
+                        attn_norm=None,
+                        norm_type='layer',
+                        norm_eps=1e-5,
+                        xavier_init: float=1e-2,
+                        diagonal_weight: float = 1e-2,
+                        dropout=0.05, 
+                        ffn_dropout=None,
+                        activation_type='relu',
+                        device=None, 
+                        dtype=None,
+                        debug=False,) -> None:
+        factory_kwargs = {'device': device, 'dtype': dtype, }
+        super(GalerkinTransformerDecoderLayer, self).__init__()
+
+        ffn_dropout = default(ffn_dropout, dropout)
+        self.debug = debug
+        self.self_attn = SimpleAttention(nhead, d_model, 
+                                        attention_type=attention_type,
+                                        pos_dim=pos_dim,
+                                        norm=attn_norm,
+                                        eps=norm_eps,
+                                        norm_type=norm_type,
+                                        diagonal_weight=diagonal_weight,
+                                        xavier_init=xavier_init,
+                                        dropout=dropout,)
+        self.multihead_attn = SimpleAttention(nhead, d_model, 
+                                        attention_type='causal',
+                                        pos_dim=pos_dim,
+                                        norm=attn_norm,
+                                        eps=norm_eps,
+                                        norm_type=norm_type,
+                                        diagonal_weight=diagonal_weight,
+                                        xavier_init=xavier_init,
+                                        dropout=dropout,)
+        dim_feedforward = default(dim_feedforward, 2*d_model)
+        self.ff = FeedForward(in_dim=d_model,
+                              dim_feedforward=dim_feedforward,
+                              activation=activation_type,
+                              dropout=ffn_dropout,
+                              )
+        self.dropout = nn.Dropout(ffn_dropout)
+        self.linear2 = nn.Linear(dim_feedforward, d_model, **factory_kwargs)
+        self.add_layer_norm = layer_norm
+        if self.add_layer_norm:
+            self.norm1 = nn.LayerNorm(d_model, eps=norm_eps, **factory_kwargs)
+            self.norm2 = nn.LayerNorm(d_model, eps=norm_eps, **factory_kwargs)
+            self.norm3 = nn.LayerNorm(d_model, eps=norm_eps, **factory_kwargs)
+        self.dropout1 = nn.Dropout(dropout)
+        self.dropout2 = nn.Dropout(dropout)
+
+        self.activation = F.relu
+
+    def forward(self, x: Tensor, memory: Tensor, 
+                tgt_mask: Optional[Tensor] = None, 
+                memory_mask: Optional[Tensor] = None,) -> Tensor:
+        r"""Pass the inputs (and mask) through the decoder layer.
+        Args:
+            tgt: the sequence to the decoder layer (required).
+            memory: the sequence from the last layer of the encoder (required).
+            tgt_mask: the mask for the tgt sequence (optional).
+            memory_mask: the mask for the memory sequence (optional).
+        Shape:
+            see the docs in Transformer class.
+        """
+        if self.add_layer_norm:
+            x = self.norm1(x + self._sa_block(x, tgt_mask))
+            x = self.norm2(x + self._mha_block(x, memory, memory_mask))
+            x = self.norm3(x + self._ff_block(x))
+        else:
+            x = x + self._sa_block(x, tgt_mask)
+            x = x + self._mha_block(x, memory, memory_mask)
+            x = x + self._ff_block(x)
+        return x
+
+    # self-attention block
+    def _sa_block(self, x: Tensor, attn_mask: Optional[Tensor]) -> Tensor:
+        x = self.self_attn(x, x, x, attn_mask=attn_mask,)[0]
+        return self.dropout1(x)
+
+    # multihead attention block
+    def _mha_block(self, x: Tensor, mem: Tensor, attn_mask: Optional[Tensor]) -> Tensor:
+        x = self.multihead_attn(x, mem, mem, mask=attn_mask,)[0]
+        return self.dropout2(x)
+
+    # feed forward block
+    def _ff_block(self, x: Tensor) -> Tensor:
+        x = self.ff(x)
+        return self.dropout(x)
+
 
 class _TransformerEncoderLayer(nn.Module):
     r"""

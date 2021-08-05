@@ -730,6 +730,33 @@ def linear_attention(query, key, value,
     out = torch.matmul(query, p_attn)
     return out, p_attn
 
+def causal_linear_attn(query, key, value, kv_mask = None, dropout = None, eps = 1e-7):
+    '''
+    Modified from https://github.com/lucidrains/linear-attention-transformer
+    '''
+    bsz, n_head, seq_len, d_k, dtype = *query.shape, query.dtype
+
+    key /= seq_len
+
+    if kv_mask is not None:
+        mask = kv_mask[:, None, :, None]
+        key = key.masked_fill_(~mask, 0.)
+        value = value.masked_fill_(~mask, 0.)
+        del mask
+    
+    b_q, b_k, b_v = [x.reshape(bsz, n_head, -1, 1, d_k) for x in (query, key, value)]
+
+    b_k_sum = b_k.sum(dim=-2)
+    b_k_cumsum = b_k_sum.cumsum(dim = -2).type(dtype)
+
+    p_attn = torch.einsum('bhund,bhune->bhude', b_k, b_v)
+    p_attn = p_attn.cumsum(dim = -3).type(dtype)
+    if dropout is not None:
+        p_attn = F.dropout(p_attn)
+
+    D_inv = 1. / torch.einsum('bhud,bhund->bhun', b_k_cumsum + eps, b_q)
+    attn = torch.einsum('bhund,bhude,bhun->bhune', b_q, p_attn, D_inv)
+    return attn.reshape(*query.shape), p_attn
 
 class SimpleAttention(nn.Module):
     '''
@@ -847,6 +874,11 @@ class SimpleAttention(nn.Module):
             x, self.attn_weight = linear_attention(query, key, value,
                                                    mask=mask,
                                                    attention_type=self.attention_type,
+                                                   dropout=self.dropout)
+        elif self.attention_type == 'causal':
+            assert mask is not None
+            x, self.attn_weight = causal_linear_attn(query, key, value,
+                                                   mask=mask,
                                                    dropout=self.dropout)
         else:
             x, self.attn_weight = attention(query, key, value,
