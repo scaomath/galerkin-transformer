@@ -44,8 +44,8 @@ def main():
                                                  n_head=args.head,
                                                  attention_type=attn_type,
                                                  dim_feedforward=None,
-                                                 layer_norm=args.reg_layernorm,
-                                                 attn_norm=not args.reg_layernorm,
+                                                 layer_norm=args.layer_norm,
+                                                 attn_norm=not args.layer_norm,
                                                  pos_dim=args.ndim,
                                                  attn_weight=False,)
         encoder_layers = nn.ModuleList(
@@ -59,7 +59,9 @@ def main():
         target = torch.randn(args.batch_size, args.seq_len,
                              args.dmodel).to(device)
 
-        with profiler.profile(profile_memory=True, use_cuda=cuda,) as pf:
+        with profiler.profile(profile_memory=True, 
+                              use_cuda=cuda, 
+                              with_flops=True) as pf:
             with tqdm(total=args.num_iter, disable=(args.num_iter<10)) as pbar:
                 for _ in range(args.num_iter):
                     x = torch.randn(args.batch_size, args.seq_len, args.dmodel).to(device)
@@ -81,6 +83,7 @@ def main():
         if cuda:
             pf_result.print_total_mem(['Self CUDA Mem'])
         pf_result.print_total_time()
+        pf_result.print_flop_per_iter(['GFLOPS'])
 
 
 if __name__ == '__main__':

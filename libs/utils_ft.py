@@ -2,6 +2,7 @@ import argparse
 import math
 import os
 import sys
+import re
 from collections import OrderedDict
 from datetime import date
 
@@ -861,23 +862,23 @@ def run_train(model, loss_func, metric_func,
 
 
 class ProfileResult:
-    def __init__(self, result_file,
-                 num_iters=1,
-                 cuda=True) -> None:
+    def __init__(self, result_file, 
+                       num_iters=1,
+                       cuda=True) -> None:
         '''
         Hard-coded result computation based on torch.autograd.profiler
-        text printout, only works PyTorch 1.8.1
+        text printout, only works PyTorch 1.8 and 1.9
         '''
         self.columns = ['Name', 'Self CPU %', 'Self CPU',
                         'CPU total %', 'CPU total', 'CPU time avg',
                         'Self CUDA', 'Self CUDA %', 'CUDA total', 'CUDA time avg',
                         'CPU Mem', 'Self CPU Mem', 'CUDA Mem', 'Self CUDA Mem',
-                        '# of Calls']
+                        '# of Calls', 'GFLOPS']
         self.df = pd.read_csv(result_file,
                               delim_whitespace=True,
                               skiprows=range(5),
                               header=None)
-        self.num_iters = num_iters
+        self.num_iters=num_iters
         self.cuda = cuda
         self._clean_df()
 
@@ -888,11 +889,9 @@ class ProfileResult:
             df.loc[:, 14] = df.loc[:, 14].astype(str) + df.loc[:, 15]
         df.loc[:, 12] = df.loc[:, 12].astype(str) + df.loc[:, 13]
         df.loc[:, 10] = df.loc[:, 10].astype(str) + df.loc[:, 11]
-        df = df.drop(columns=[11, 13, 15, 17]
-                     ) if self.cuda else df.drop(columns=[11, 13])
+        df = df.drop(columns=[11, 13, 15, 17]) if self.cuda else df.drop(columns=[11, 13])
         self.cpu_time_total = df.iloc[-2, 4]
-        if self.cuda:
-            self.cuda_time_total = df.iloc[-1, 4]
+        if self.cuda: self.cuda_time_total = df.iloc[-1, 4]
         df = df[:-3].copy()
         df.columns = self.columns
         self.df = df
@@ -923,28 +922,45 @@ class ProfileResult:
             total_times.append(round(total_time, 2))
         return total_times
 
-    def print_total_mem(self, col_names):
+    def compute_total(self, col_names):
+        totals = []
+        for col_name in col_names:
+            total = 0
+            col_vals = self.df[col_name].values
+            for val in col_vals:
+                if val[-1].isnumeric():
+                    total += float(val)
+            totals.append(round(total, 2))
+        return totals
+
+    def print_total_mem(self,col_names):
         total_mems = self.compute_total_mem(col_names)
         for i, col_name in enumerate(col_names):
             print(f"{col_name} total: {total_mems[i]} GB")
-
-    def print_total(self, col_names):
-        total_times = self.compute_total_time(col_names)
+    
+    def print_total(self,col_names):
+        totals = self.compute_total(col_names)
         for i, col_name in enumerate(col_names):
-            print(f"{col_name} total: {total_times[i]} ms")
-
+            print(f"{col_name} total: {totals[i]}")
+    
     def print_total_time(self):
         print(f"# of backprop iters: {self.num_iters}")
         print(f"CPU time total: {self.cpu_time_total}")
         if self.cuda:
             print(f"CUDA time total: {self.cuda_time_total}")
 
+    def print_flop_per_iter(self, flops_col: list):
+        totals = self.compute_total(flops_col)
+        cuda_time_total = re.findall( r'\d+\.*\d*', self.cuda_time_total)[0]
+        for i, col in enumerate(flops_col):
+            print(f"{col}*time per iteration: {totals[i]*float(cuda_time_total)/self.num_iters}")
+
     @staticmethod
     def get_str_val(string):
         if string[0] == '-':
-            return -float(string[1:])
+            return  -float(string[1:])
         else:
-            return float(string)
+            return  float(string)
 
 
 if __name__ == '__main__':
