@@ -14,14 +14,20 @@
 
 - If just wanting to see what is it like for the models to perform on the unseen test set, please refer to [evaluation](#evaluation-notebooks).
 
-## Introduction
-The new attention operator is simply `Q(K^TV)` (or the quadratic complexity one `(QK^T)V`), whichever doing `matmul` gets the layer normalization, similar to Gram-Schmidt process where we have to divide the basis's norm squared. `Q, K` get layer normalized in the Fourier-type attention (every position attends with every other), as for `K, V` in the Galerkin-type attention (every basis attends with every other basis). No softmax, no layer normalization is applied afterward. Overall this is called a scale-preserving simple attention. The feature extractor is a simple FFN or an interpolation-based CNN, the decoder is the spectral convolution real parameter re-implementation from the best operator learner to-date Fourier Neural Operator (FNO) in [*Li et al 2020*](https://github.com/zongyi-li/fourier_neural_operator) if the target is smooth, or just a pointwise FFN if otherwise. The resulting network is extremely powerful in learning PDE-related operators (energy decay, inverse coefficient identification).
+## Introduction 
+The new attention operator (for the encoder) is simply `Q(K^TV)`, or the quadratic complexity one `(QK^T)V`. 
+- No softmax, or the approximation thereof, at all.
+- Whichever two latent representations doing `matmul` get the layer normalization, similar to Gram-Schmidt process where we have to divide the basis's norm squared. `Q, K` get layer normalized in the Fourier-type attention (every position attends with every other), as for `K, V` in the Galerkin-type attention (every basis attends with every other basis). No layer normalization is applied afterward. 
+- Some other components are tweaked according to our Hilbertian interpretation of attention.
 
+Overall this is called a scale-preserving simple attention. For the full operator learner, the feature extractor is a simple linear layer or an interpolation-based CNN, the decoder is the spectral convolution real parameter re-implementation from the best operator learner to-date Fourier Neural Operator (FNO) in [*Li et al 2020*](https://github.com/zongyi-li/fourier_neural_operator) if the target is smooth, or just a pointwise FFN if otherwise. The resulting network is extremely powerful in learning PDE-related operators (energy decay, inverse coefficient identification).
 
+## Hilbertian framework to analyze linear attention
 Even though everyone is Transformer'ing, the mathematics behind the attention mechanism is not well understood. We have also shown that the Galerkin-type attention (a linear attention without softmax) has an approximation capacity on par with a Petrov-Galerkin projection under a Hilbertian setup. We use a method commonly known as ''mixed method'' in the finite element analysis community that is used to solve fluid/electromagnetics problems. Unlike finite element methods, in an attention-based operator learner the approximation is not discretization-tied, in that:
 
-1. The dimensions of the approximation spaces are not tied to the geometry as in the traditional finite element analysis (or finite difference, spectral methods, radial basis, etc.);
-2. The approximation spaces are being dynamically updated by the nonlinear universal approximator due to the presence of the positional encodings, which determines the topology of the approximation space.
+1. The latent representation is interpreted "column-wise" (each column represents a basis), opposed to the conventional "row-wise"/ "position-wise"/"word-wise" interpretation of attention in NLP.
+2. The dimensions of the approximation spaces are not tied to the geometry as in the traditional finite element analysis (or finite difference, spectral methods, radial basis, etc.);
+3. The approximation spaces are being dynamically updated by the nonlinear universal approximator due to the presence of the positional encodings, which determines the topology of the approximation space.
 
 For details please refer to: [https://arxiv.org/abs/2105.14995](https://arxiv.org/abs/2105.14995)
 ```bibtex
