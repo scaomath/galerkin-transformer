@@ -1183,6 +1183,106 @@ class FourierTransformer2D(nn.Module):
         else:
             raise NotImplementedError("Decoder type not implemented")
 
+class FourierTransformer2DLite(nn.Module):
+    '''
+    A lite model of the Fourier/Galerkin Transformer
+    '''
+    def __init__(self, **kwargs):
+        super(FourierTransformer2DLite, self).__init__()
+        self.config = defaultdict(lambda: None, **kwargs)
+        self._get_setting()
+        self._initialize()
+
+    def forward(self, node, edge, pos, grid=None):
+        '''
+        seq_len: n, number of grid points
+        node_feats: number of features of the inputs
+        pos_dim: dimension of the Euclidean space
+        - node: (batch_size, n*n, node_feats)
+        - pos: (batch_size, n*n, pos_dim)
+        - grid: (batch_size, n, n, pos_dim)
+
+        Remark:
+        for classic Transformer: pos_dim = n_hidden = 512
+        pos encodings is added to the latent representation
+        '''
+        bsz = node.size(0)
+        input_dim = node.size(-1)
+        n_grid = grid.size(1)
+        node = torch.cat([node.view(bsz, -1, input_dim), pos],
+                         dim=-1)
+        x = self.feat_extract(node, edge)
+
+        for encoder in self.encoder_layers:
+            x = encoder(x, pos)
+
+        x = self.dpo(x)
+        x = x.view(bsz, n_grid, n_grid, -1)
+        x = self.regressor(x, grid=grid)
+
+        return dict(preds=x,
+                    preds_freq=None,
+                    preds_latent=None,
+                    attn_weights=None)
+
+    def _initialize(self):
+        self._get_feature()
+        self._get_encoder()
+        self._get_regressor()
+        self.config = dict(self.config)
+
+    def _get_setting(self):
+        all_attr = list(self.config.keys()) + ADDITIONAL_ATTR
+        for key in all_attr:
+            setattr(self, key, self.config[key])
+
+        self.dim_feedforward = default(self.dim_feedforward, 2*self.n_hidden)
+        self.spacial_dim = default(self.spacial_dim, self.pos_dim)
+        self.spacial_fc = default(self.spacial_fc, False)
+        self.dropout = default(self.dropout, 0.05)
+        self.dpo = nn.Dropout(self.dropout)
+        if self.decoder_type == 'attention':
+            self.num_encoder_layers += 1
+        self.attention_types = ['fourier', 'integral',
+                                'cosine', 'galerkin', 'linear', 'softmax']
+
+    def _get_feature(self):
+        self.feat_extract = Identity(in_features=self.node_feats,
+                                     out_features=self.n_hidden)
+
+    def _get_encoder(self):
+        encoder_layer = FourierTransformerEncoderLayer(d_model=self.n_hidden,
+                                                       n_head=self.n_head,
+                                                       dim_feedforward=self.dim_feedforward,
+                                                       layer_norm=self.layer_norm,
+                                                       attention_type=self.attention_type,
+                                                       attn_norm=self.attn_norm,
+                                                       norm_type=self.norm_type,
+                                                       xavier_init=self.xavier_init,
+                                                       diagonal_weight=self.diagonal_weight,
+                                                       dropout=self.encoder_dropout,
+                                                       ffn_dropout=self.ffn_dropout,
+                                                       pos_dim=self.pos_dim,
+                                                       debug=self.debug)
+
+        self.encoder_layers = nn.ModuleList(
+            [copy.deepcopy(encoder_layer) for _ in range(self.num_encoder_layers)])
+
+    def _get_regressor(self):
+        self.regressor = SpectralRegressor(in_dim=self.n_hidden,
+                                           n_hidden=self.n_hidden,
+                                           freq_dim=self.freq_dim,
+                                           out_dim=self.n_targets,
+                                           num_spectral_layers=self.num_regressor_layers,
+                                           modes=self.fourier_modes,
+                                           spacial_dim=self.spacial_dim,
+                                           spacial_fc=self.spacial_fc,
+                                           dim_feedforward=self.freq_dim,
+                                           activation=self.regressor_activation,
+                                           dropout=self.decoder_dropout,
+                                           )
+
+
 if __name__ == '__main__':
     for graph in ['gcn', 'gat']:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

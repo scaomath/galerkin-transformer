@@ -26,6 +26,7 @@
     scheduler = OneCycleLR(optimizer, max_lr=1e-3, div_factor=1e4, final_div_factor=1e4,
                             steps_per_epoch=len(train_loader), epochs=epochs)
     ```
+    Moreover, please move the `scheduler.step()` from the end of each epoch to the end of each batch right after `optimizer.step()`.
 
 
 
