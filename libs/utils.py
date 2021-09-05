@@ -313,7 +313,6 @@ def mount(source, target, fs, options=''):
     errno = ctypes.get_errno()
     raise OSError(errno, f"Error mounting {source} ({fs}) on {target} with options '{options}': {os.strerror(errno)}")
 
-
 if __name__ == "__main__":
     get_system()
     get_memory()

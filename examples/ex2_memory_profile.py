@@ -1,5 +1,4 @@
-import sys
-sys.path.append("../")
+from libs_path import *
 from libs import *
 import argparse
 import torch.autograd.profiler as profiler

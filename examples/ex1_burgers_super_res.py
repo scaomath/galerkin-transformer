@@ -3,10 +3,8 @@ zero-shot super-resolution
 train: 2048 grid
 val: 8192 grid
 '''
-import sys
-sys.path.append("../")
+from libs_path import *
 from libs import *
-
 
 def main():
     args = get_args_1d()

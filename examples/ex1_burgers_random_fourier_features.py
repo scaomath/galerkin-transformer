@@ -1,12 +1,11 @@
 '''
 Use Fourier Features to replace the simple attention in Galerkin Transformer
 
-Code courtesy of angeloskath@GitHub
+Code modified from and courtesy of angeloskath@GitHub
 https://fast-transformers.github.io/api_docs/fast_transformers/feature_maps/fourier_features.html
 '''
 
-import sys
-sys.path.append("../")
+from libs_path import *
 from libs import *
 from math import sqrt, log
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
