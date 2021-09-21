@@ -62,9 +62,12 @@ class PositionalEncoding(nn.Module):
     '''
     https://pytorch.org/tutorials/beginner/transformer_tutorial.html
     This is not necessary if spacial coords are given
+    input is (batch, seq_len, d_model)
     '''
 
-    def __init__(self, d_model, dropout=0.1, max_len=2**12):
+    def __init__(self, d_model, 
+                       dropout=0.1, 
+                       max_len=2**13):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(dropout)
 
@@ -74,11 +77,11 @@ class PositionalEncoding(nn.Module):
             0, d_model, 2).float() * (-math.log(2**13) / d_model))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0).transpose(0, 1)
+        pe = pe.unsqueeze(0)
         self.register_buffer('pe', pe)
 
     def forward(self, x):
-        x = x + self.pe[:x.size(0), :]
+        x = x + self.pe[:, :x.size(1), :]
         return self.dropout(x)
 
 
