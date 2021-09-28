@@ -1,4 +1,4 @@
-# Galerkin Transformer: linear attention without softmax
+# [NeurIPS 2021] Galerkin Transformer: linear attention without softmax
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python 3.8](https://img.shields.io/badge/python-3.8-blue.svg)](https://www.python.org/downloads/release/python-370/)
 [![Pytorch 1.9](https://img.shields.io/badge/pytorch-1.9-blue.svg)](https://pytorch.org/)
