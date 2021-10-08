@@ -76,7 +76,9 @@ def main():
     h = (1/2**13)*args.subsample
     tqdm_mode = 'epoch' if not args.show_batch else 'batch'
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    scheduler = OneCycleLR(optimizer, max_lr=lr, div_factor=1e4, final_div_factor=1e4,
+    scheduler = OneCycleLR(optimizer, max_lr=lr, div_factor=1e4,
+                           pct_start=0.2,
+                           final_div_factor=1e4,
                            steps_per_epoch=len(train_loader), epochs=epochs)
 
     loss_func = WeightedL2Loss(regularizer=True, h=h, gamma=args.gamma)

@@ -104,7 +104,10 @@ def main():
     lr = args.lr
     h = 1/n_grid_c
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    scheduler = OneCycleLR(optimizer, max_lr=lr, div_factor=1e4, final_div_factor=1e4,
+    scheduler = OneCycleLR(optimizer, max_lr=lr, 
+                           div_factor=1e4, 
+                           final_div_factor=1e4,
+                           pct_start=0.2,
                            steps_per_epoch=len(train_loader), epochs=epochs)
 
     loss_func = WeightedL2Loss2d(regularizer=False, h=h)

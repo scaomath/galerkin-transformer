@@ -8,7 +8,8 @@
 
 # Summary
 - A non-numerical analyst oriented explanation on Toward Data Science about the [Galerkin Transformer](https://towardsdatascience.com/galerkin-transformer-a-one-shot-experiment-at-neurips-2021-96efcbaefd3e)
--  [The post on my blog](https://scaomath.github.io/blog/galerkin-transformer/), has a bit more details on the math of how to bridge a nonlinear operator's approximation capacity with a linear operator (Petrov-Galerkin projection).
+- The post on my mentor's WeChat blog (in Chinese): [Galerkin Transformer: 初学者的进击](https://mp.weixin.qq.com/s?__biz=MzUxNzk0NjExOA==&mid=2247487695&idx=1&sn=be0c364d5d85ca83ee27f4425d0a38c2)
+-  [The post on my blog](https://scaomath.github.io/blog/galerkin-transformer/), has much more details on the math of how to bridge the attention operator (a nonlinear operator)'s approximation capacity with a linear operator (Petrov-Galerkin projection).
 
 - For how to train our models please refer to [the training instructions under the `/examples` folder](./examples/).
 
@@ -126,7 +127,7 @@ Since [`nn.functional.interpolate`](https://pytorch.org/docs/master/generated/to
 
 ![net](./data/simple_ft.png)
 
-The baseline benchmark [`ex1_burgers.py`](./examples/): evaluation relative error is about `1e-3` with a simple pointwise forward expansion feature extractor. The input is the initial condition of a viscous Burgers' equation on a discrete grid, the output is an approximation to the solution marched to time $1$. The initial data are generating using a GRF and the data in the validation set are not in the train set.
+The baseline benchmark [`ex1_burgers.py`](./examples/): evaluation relative error is about `1e-3` with a simple pointwise forward expansion feature extractor with only 100 epochs of training. Using the common 500 epochs of training the evaluation error is about `7e-4`. The input is the initial condition of a viscous Burgers' equation on a discrete grid, the output is an approximation to the solution marched to time $1$. The initial data are generating using a GRF and the data in the validation set are not in the train set.
 
 Default benchmark on a 2048 grid using a Fourier Transformer, with 4 Fourier-type attention encoder layers as the encoder and 2 spectral convolution layers from [Li et al 2020](https://github.com/zongyi-li/fourier_neural_operator) as the decoder (to reduce the overfit we decrease the `dmodel` of the spectral conv from the original 64 to 48):
 ```bash
