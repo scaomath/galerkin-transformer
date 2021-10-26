@@ -170,7 +170,7 @@ class FourierTransformer2DLite(nn.Module):
                                      out_features=self.n_hidden)
 
     def _get_encoder(self):
-        encoder_layer = FourierTransformerEncoderLayer(d_model=self.n_hidden,
+        encoder_layer = SimpleTransformerEncoderLayer(d_model=self.n_hidden,
                                                        n_head=self.n_head,
                                                        dim_feedforward=self.dim_feedforward,
                                                        layer_norm=self.layer_norm,

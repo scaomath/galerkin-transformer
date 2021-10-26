@@ -58,7 +58,7 @@ def main():
 
     get_seed(args.seed)
     torch.cuda.empty_cache()
-    model = FourierTransformer(**config)
+    model = SimpleTransformer(**config)
     model = model.to(device)
     print(f"\nModel: {model.__name__}\t Number of params: {get_num_params(model)}")
 

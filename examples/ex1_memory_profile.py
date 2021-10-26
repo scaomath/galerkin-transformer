@@ -31,7 +31,7 @@ def main():
     cuda = not args.no_cuda and torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     current_path = os.path.dirname(os.path.abspath(__file__))
-    with open(os.path.join(current_path, r'config.yml')) as f:
+    with open(os.path.join(SRC_ROOT, r'config.yml')) as f:
         config = yaml.full_load(f)
     config = config['ex1_burgers']
     for arg in vars(args):
@@ -42,7 +42,7 @@ def main():
     for attn_type in attn_types:
         config['attention_type'] = attn_type
         torch.cuda.empty_cache()
-        model = FourierTransformer(**config)
+        model = SimpleTransformer(**config)
         model = model.to(device)
         print(
             f"\nModel name: {model.__name__}\t Number of params: {get_num_params(model)}")
@@ -51,7 +51,9 @@ def main():
         pos = torch.randn(args.batch_size, args.seq_len, 1).to(device)
         target = torch.randn(args.batch_size, args.seq_len, 1).to(device)
 
-        with profiler.profile(profile_memory=not args.no_memory, use_cuda=cuda,) as pf:
+        with profiler.profile(profile_memory=True, 
+                              use_cuda=cuda, 
+                              with_flops=True) as pf:
             with tqdm(total=args.num_iter, disable=(args.num_iter<10)) as pbar:
                 for _ in range(args.num_iter):
                     y = model(node, None, pos)
@@ -72,6 +74,7 @@ def main():
         if cuda:
             pf_result.print_total_mem(['Self CUDA Mem'])
         pf_result.print_total_time()
+        pf_result.print_flop_per_iter(['GFLOPS']) # this is in MFLOPs
 
 if __name__ == '__main__':
     main()

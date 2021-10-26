@@ -386,9 +386,9 @@ class TransformerEncoderLayer(nn.Module):
         return x
 
 
-class FourierTransformer(nn.Module):
+class SimpleTransformer(nn.Module):
     def __init__(self, **kwargs):
-        super(FourierTransformer, self).__init__()
+        super(SimpleTransformer, self).__init__()
         self.config = defaultdict(lambda: None, **kwargs)
         self._get_setting()
         self._initialize()
@@ -510,7 +510,7 @@ config = defaultdict(lambda: None,
                      )
 
 torch.cuda.empty_cache()
-model = FourierTransformer(**config)
+model = SimpleTransformer(**config)
 model = model.to(device)
 
 print(f"\nNumber of params: {get_num_params(model)}")

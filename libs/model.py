@@ -30,7 +30,7 @@ ADDITIONAL_ATTR = ['normalizer', 'raw_laplacian', 'return_latent',
                    'encoder_dropout', 'decoder_dropout', 'ffn_dropout']
 
 
-class FourierTransformerEncoderLayer(nn.Module):
+class SimpleTransformerEncoderLayer(nn.Module):
     def __init__(self,
                  d_model=96,
                  pos_dim=1,
@@ -53,7 +53,7 @@ class FourierTransformerEncoderLayer(nn.Module):
                  ffn_dropout=None,
                  debug=False,
                  ):
-        super(FourierTransformerEncoderLayer, self).__init__()
+        super(SimpleTransformerEncoderLayer, self).__init__()
 
         dropout = default(dropout, 0.05)
         if attention_type in ['linear', 'softmax']:
@@ -749,9 +749,9 @@ class UpScaler(nn.Module):
         return x
 
 
-class FourierTransformer(nn.Module):
+class SimpleTransformer(nn.Module):
     def __init__(self, **kwargs):
-        super(FourierTransformer, self).__init__()
+        super(SimpleTransformer, self).__init__()
         self.config = defaultdict(lambda: None, **kwargs)
         self._get_setting()
         self._initialize()
@@ -867,7 +867,7 @@ class FourierTransformer(nn.Module):
 
     def _get_encoder(self):
         if self.attention_type in self.attention_types:
-            encoder_layer = FourierTransformerEncoderLayer(d_model=self.n_hidden,
+            encoder_layer = SimpleTransformerEncoderLayer(d_model=self.n_hidden,
                                                            n_head=self.n_head,
                                                            attention_type=self.attention_type,
                                                            dim_feedforward=self.dim_feedforward,
@@ -1124,7 +1124,7 @@ class FourierTransformer2D(nn.Module):
 
     def _get_encoder(self):
         if self.attention_type in self.attention_types:
-            encoder_layer = FourierTransformerEncoderLayer(d_model=self.n_hidden,
+            encoder_layer = SimpleTransformerEncoderLayer(d_model=self.n_hidden,
                                                            n_head=self.n_head,
                                                            attention_type=self.attention_type,
                                                            dim_feedforward=self.dim_feedforward,
@@ -1251,7 +1251,7 @@ class FourierTransformer2DLite(nn.Module):
                                      out_features=self.n_hidden)
 
     def _get_encoder(self):
-        encoder_layer = FourierTransformerEncoderLayer(d_model=self.n_hidden,
+        encoder_layer = SimpleTransformerEncoderLayer(d_model=self.n_hidden,
                                                        n_head=self.n_head,
                                                        dim_feedforward=self.dim_feedforward,
                                                        layer_norm=self.layer_norm,
@@ -1322,7 +1322,7 @@ if __name__ == '__main__':
                             debug=False,
                             )
 
-        ft = FourierTransformer(**config)
+        ft = SimpleTransformer(**config)
         ft.to(device)
         batch_size, seq_len = 8, 512
         summary(ft, input_size=[(batch_size, seq_len, 1),

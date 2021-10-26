@@ -39,7 +39,7 @@ def main():
     for attn_type in attn_types:
         torch.cuda.empty_cache()
 
-        encoder = FourierTransformerEncoderLayer(d_model=args.dmodel,
+        encoder = SimpleTransformerEncoderLayer(d_model=args.dmodel,
                                                  n_head=args.head,
                                                  attention_type=attn_type,
                                                  dim_feedforward=None,
