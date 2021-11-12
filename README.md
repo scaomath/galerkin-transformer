@@ -23,26 +23,29 @@ The new simple attention operator (for the encoder) is simply `Q(K^TV)` (Galerki
 
 For the full operator learner, the feature extractor is a simple linear layer or an interpolation-based CNN, the decoder is the spectral convolution real parameter re-implementation from the best operator learner to-date Fourier Neural Operator (FNO) in [*Li et al 2020*](https://github.com/zongyi-li/fourier_neural_operator) if the target is smooth, or just a pointwise FFN if otherwise. The resulting network is extremely powerful in learning PDE-related operators (energy decay, inverse coefficient identification).
 
-## Hilbertian framework to analyze linear attention
+## Hilbertian framework to analyze a linear attention variant
 Even though everyone is Transformer'ing, the mathematics behind the attention mechanism is not well understood. We have also shown that the Galerkin-type attention (a linear attention without softmax) has an approximation capacity on par with a Petrov-Galerkin projection under a Hilbertian setup. We use a method commonly known as ''mixed method'' in the finite element analysis community that is used to solve fluid/electromagnetics problems. Unlike finite element methods, in an attention-based operator learner the approximation is not discretization-tied, in that:
 
 1. The latent representation is interpreted "column-wise" (each column represents a basis), opposed to the conventional "row-wise"/ "position-wise"/"word-wise" interpretation of attention in NLP.
 2. The dimensions of the approximation spaces are not tied to the geometry as in the traditional finite element analysis (or finite difference, spectral methods, radial basis, etc.);
 3. The approximation spaces are being dynamically updated by the nonlinear universal approximator due to the presence of the positional encodings, which determines the topology of the approximation space.
 
+## Interpretation of the attention mechanism
+1. Approximation capacity: an incoming "query" is a function in some Hilbert space that comes to ask us to find its best representation in the latent space. To deliver the best approximator in "value" (trial function space), the "key" space (test function space) has to be big enough so that for every value there is a key to unlock it.
+2. Translation capacity: the attention is capable to find latent representations to minimize a functional norm that measures the distance between the input (query) and the target (values). An ideal operator learner is learning some nonlinear perturbations of the subspaces on which the input (query) and the target (values) are "close", and this closeness is measured by how they respond to a dynamically changing set of test basis (keys).
+
 For details please refer to: [https://arxiv.org/abs/2105.14995](https://arxiv.org/abs/2105.14995)
 ```bibtex
-@Misc{Cao:2021transformer,
+@inproceedings{Cao2021transformer,
   author        = {Shuhao Cao},
-  title         = {Choose a Transformer: Fourier or Galerkin},
+  title         = {Choose a Transformer: {F}ourier or {G}alerkin},
+  booktitle     = {Thirty-Fifth Conference on Neural Information Processing Systems (NeurIPS 2021)},
   year          = {2021},
-  archiveprefix = {arXiv},
-  eprint        = {2105.14995},
+  eprint        = {arXiv: 2105.14995},
   primaryclass  = {cs.CL},
-  url           = {https://arxiv.org/abs/2105.14995},
+  url={https://openreview.net/forum?id=ssohLcmn4-r},
 }
 ```
-
 
 # Install
 
