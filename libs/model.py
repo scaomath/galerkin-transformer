@@ -1,9 +1,9 @@
 try:
-    from libs.layers import *
-    from libs.utils_ft import *
-except:
     from layers import *
     from utils_ft import *
+except:
+    from galerkin_transformer.layers import *
+    from galerkin_transformer.utils_ft import *
 
 import copy
 import os

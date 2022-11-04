@@ -16,7 +16,7 @@ import gc
 try:
     from utils_ft import *
 except:
-    from libs.utils_ft import *
+    from galerkin_transformer.utils_ft import *
 
 import matplotlib.pyplot as plt
 
