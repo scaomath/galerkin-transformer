@@ -2,8 +2,8 @@ from setuptools import setup, find_packages
 
 setup(
   name = 'galerkin_transformer',
-  packages = find_packages(exclude=['data']),
-  version = '0.1.2',
+  packages=find_packages(include=['galerkin_transformer', 'galerkin_transformer.*']),
+  version = '0.2.1',
   license='MIT',
   description = 'Galerkin Transformer',
   long_description='Galerkin Transformer: a linear attention without softmax',
