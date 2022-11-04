@@ -16,12 +16,6 @@ import numpy as np
 import psutil, platform, subprocess, re
 import torch
 
-import ctypes
-import ctypes.util
-
-libc = ctypes.CDLL(ctypes.util.find_library('c'), use_errno=True)
-libc.mount.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_ulong, ctypes.c_char_p)
-
 ##########################################################################
 from IPython import get_ipython
 def is_interactive():
@@ -47,7 +41,7 @@ if is_interactive():
         from jupyterthemes import jtplot
         jtplot.style(theme='onedork', context='notebook', ticks=True, grid=False)
     except ImportError:
-        print("Package not found.")
+        print("Interactive environ: Jupyter themes not found.")
 
 #########################################################################
 
@@ -306,12 +300,6 @@ class DotDict(dict):
     def __setstate__(self, state):
         self.update(state)
         self.__dict__ = self
-
-def mount(source, target, fs, options=''):
-  ret = libc.mount(source.encode(), target.encode(), fs.encode(), 0, options.encode())
-  if ret < 0:
-    errno = ctypes.get_errno()
-    raise OSError(errno, f"Error mounting {source} ({fs}) on {target} with options '{options}': {os.strerror(errno)}")
 
 if __name__ == "__main__":
     get_system()

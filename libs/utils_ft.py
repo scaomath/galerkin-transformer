@@ -20,9 +20,9 @@ from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
 try:
-    from libs.utils import *
-except:
     from utils import *
+except:
+    from galerkin_transformer.utils import *
 
 try:
     import plotly.express as px
